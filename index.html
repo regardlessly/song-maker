@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Song Maker 🎵</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#fdf9f4}
+
+/* ── Shell ── */
+#app{height:100dvh;display:flex;flex-direction:column;overflow:hidden;max-width:1100px;margin:0 auto}
+
+/* ── Progress dots ── */
+#dots{display:flex;justify-content:center;align-items:center;gap:12px;padding:10px 0;flex-shrink:0}
+.dot{width:15px;height:15px;border-radius:50%;border:2.5px solid #c8a06a;background:transparent;transition:all .3s}
+.dot.done{background:#c8a06a}
+.dot.active{background:#c05c1a;border-color:#c05c1a;transform:scale(1.25);box-shadow:0 0 8px #c05c1a60}
+
+/* ── Steps ── */
+.step{display:none;flex:1;flex-direction:column;overflow:hidden;padding:0 18px}
+.step.active{display:flex}
+
+/* ── Step title ── */
+.step-title{text-align:center;padding:4px 0 10px;flex-shrink:0}
+.step-title h1{font-size:27px;font-weight:900;color:#2a1600;line-height:1.2}
+.step-title .cn{font-size:20px;color:#7a5a3a;margin-top:3px;display:block;font-weight:600}
+
+/* ── Content area ── */
+.step-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+
+/* ── 3×2 mood grid ── */
+.mood-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
+  gap:9px;height:100%;
+}
+
+/* ── 2×2 choice grid ── */
+.choice-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);
+  gap:12px;height:100%;
+}
+
+/* ── Choice button ── */
+.cbtn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;border:2.5px solid #e5cfb5;border-radius:18px;
+  background:#fffaf4;cursor:pointer;transition:all .14s;
+  padding:10px 6px;user-select:none;-webkit-user-select:none;min-height:60px;
+}
+.cbtn:active,.cbtn:hover{border-color:#c05c1a;background:#fff3e4}
+.cbtn.selected{border-color:#c05c1a;background:#fff3e4;box-shadow:0 0 0 3px #c05c1a35}
+.cbtn .em{font-size:34px;line-height:1;flex-shrink:0}
+.cbtn .en{font-size:17px;font-weight:800;color:#2a1600;text-align:center;line-height:1.2}
+.cbtn .cn{font-size:14px;color:#7a5a3a;font-weight:600}
+.cbtn .phint{font-size:11px;color:#b8906a;margin-top:1px}
+
+/* ── Navigation ── */
+.step-nav{display:flex;align-items:center;gap:10px;padding:9px 0 12px;flex-shrink:0}
+.back-btn{
+  padding:14px 20px;font-size:18px;font-weight:800;
+  border:2.5px solid #c8a06a;border-radius:13px;
+  background:#fffaf4;color:#7a5a3a;cursor:pointer;min-height:56px;min-width:90px;
+}
+.back-btn:hover{background:#fff3e4}
+.next-btn{
+  flex:1;padding:14px 20px;font-size:20px;font-weight:900;
+  border:none;border-radius:13px;background:#c05c1a;color:#fff;
+  cursor:pointer;min-height:56px;letter-spacing:.01em;transition:all .14s;
+}
+.next-btn:hover:not(:disabled){background:#a84810}
+.next-btn:disabled{background:#e8c8a0;color:#c8a06a;cursor:not-allowed}
+.skip-btn{
+  padding:14px 16px;font-size:16px;font-weight:700;
+  border:2.5px solid #d8c0a8;border-radius:13px;
+  background:transparent;color:#7a5a3a;cursor:pointer;min-height:56px;
+}
+.skip-btn:hover{background:#fff3e4}
+
+/* ── Words step ── */
+#words-area{
+  flex:1;width:100%;border:2.5px solid #e5cfb5;border-radius:14px;
+  padding:14px;font-size:21px;color:#2a1600;background:#fffaf4;
+  resize:none;outline:none;font-family:inherit;line-height:1.6;min-height:0;
+}
+#words-area:focus{border-color:#c05c1a}
+#words-area::placeholder{color:#c8a06a}
+.tmpl-row{display:flex;flex-wrap:wrap;gap:7px;padding:8px 0 2px;flex-shrink:0}
+.tbtn{
+  padding:8px 14px;font-size:15px;border:1.5px solid #d8c0a8;
+  border-radius:22px;background:#fffaf4;color:#6b3a10;cursor:pointer;
+  font-weight:600;transition:all .12s;
+}
+.tbtn:hover{background:#fff3e4;border-color:#c05c1a}
+
+/* ── Step 5 Play ── */
+#step-5{padding:8px 18px 10px;gap:0}
+#play-btn-big{
+  width:100%;padding:20px;font-size:28px;font-weight:900;
+  border:none;border-radius:18px;background:#388a3c;color:#fff;
+  cursor:pointer;min-height:76px;letter-spacing:.02em;
+  transition:background .14s;flex-shrink:0;
+}
+#play-btn-big:hover{background:#2a6e2e}
+#play-btn-big.playing{background:#1a5e20;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025);box-shadow:0 0 20px #38aa3c60}}
+
+#karaoke-box{
+  flex:1;display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:12px;border-radius:14px;background:#fffaf4;border:2.5px dashed #e5cfb5;
+  margin:9px 0;min-height:80px;overflow:hidden;
+}
+#karaoke-text{font-size:23px;line-height:1.6;color:#2a1600;word-break:break-word;max-height:100%;overflow:hidden}
+#karaoke-text .kw{transition:all .25s;opacity:.35}
+#karaoke-text .kw.hi{color:#c05c1a;opacity:1;font-weight:800}
+
+#play-status{
+  text-align:center;font-size:16px;color:#7a5a3a;padding:2px 0 6px;
+  flex-shrink:0;font-weight:600;
+}
+#play-actions{display:flex;gap:10px;flex-shrink:0}
+#play-actions button{
+  flex:1;padding:13px;font-size:16px;font-weight:800;border-radius:13px;
+  cursor:pointer;min-height:52px;border:2.5px solid;transition:background .12s;
+}
+#again-btn{background:#fffaf4;border-color:#c05c1a;color:#c05c1a}
+#again-btn:hover{background:#fff3e4}
+#save-btn{background:#fffaf4;border-color:#388a3c;color:#388a3c}
+#save-btn:hover{background:#f0faf0}
+#restart-btn{background:#fffaf4;border-color:#7a5a3a;color:#7a5a3a}
+#restart-btn:hover{background:#fff3e4}
+
+/* ── Confetti ── */
+@keyframes confFall{
+  0%{transform:translateY(-10px) rotate(0deg);opacity:1}
+  80%{opacity:1}
+  100%{transform:translateY(105vh) rotate(600deg);opacity:0}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Progress dots -->
+<div id="dots">
+  <div class="dot active" id="d1"></div>
+  <div class="dot" id="d2"></div>
+  <div class="dot" id="d3"></div>
+  <div class="dot" id="d4"></div>
+  <div class="dot" id="d5"></div>
+</div>
+
+<!-- ═══ STEP 1: MOOD ═══ -->
+<div class="step active" id="step-1">
+  <div class="step-title">
+    <h1>How are you feeling today?</h1>
+    <span class="cn">你今天心情如何？</span>
+  </div>
+  <div class="step-content">
+    <div class="mood-grid" id="mood-grid"></div>
+  </div>
+  <div class="step-nav">
+    <button class="next-btn" id="next-1" disabled onclick="goNext()">Next ➡</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 2: RHYTHM ═══ -->
+<div class="step" id="step-2">
+  <div class="step-title">
+    <h1>Pick a rhythm</h1>
+    <span class="cn">选个节拍</span>
+  </div>
+  <div class="step-content">
+    <div class="choice-grid" id="rhythm-grid"></div>
+  </div>
+  <div class="step-nav">
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+    <button class="next-btn" id="next-2" disabled onclick="goNext()">Next ➡</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 3: INSTRUMENT ═══ -->
+<div class="step" id="step-3">
+  <div class="step-title">
+    <h1>Choose your sound</h1>
+    <span class="cn">选个声音</span>
+  </div>
+  <div class="step-content">
+    <div class="choice-grid" id="instrument-grid"></div>
+  </div>
+  <div class="step-nav">
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+    <button class="next-btn" id="next-3" disabled onclick="goNext()">Next ➡</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 4: WORDS ═══ -->
+<div class="step" id="step-4">
+  <div class="step-title">
+    <h1>Add your words</h1>
+    <span class="cn">加你的话（可以不填）</span>
+  </div>
+  <div class="step-content" style="gap:8px;display:flex;flex-direction:column">
+    <textarea id="words-area"
+      placeholder="Type anything... a memory, a feeling, a message to family&#10;写下任何想说的话..."></textarea>
+    <div class="tmpl-row">
+      <button class="tbtn" onclick="tmpl('Today I feel ')">Today I feel...</button>
+      <button class="tbtn" onclick="tmpl('I remember when ')">I remember when...</button>
+      <button class="tbtn" onclick="tmpl('My favorite ')">My favorite...</button>
+      <button class="tbtn" onclick="tmpl('I am thankful for ')">I am thankful for...</button>
+    </div>
+  </div>
+  <div class="step-nav">
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+    <button class="skip-btn" onclick="skipWords()">Skip ➡</button>
+    <button class="next-btn" style="flex:.75" onclick="goNext()">✓ Done</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 5: PLAY ═══ -->
+<div class="step" id="step-5">
+  <div class="step-title" style="padding-bottom:5px">
+    <h1>🎵 Your Song!</h1>
+    <span class="cn">你的歌！</span>
+  </div>
+  <div class="step-content" style="display:flex;flex-direction:column;gap:0">
+    <button id="play-btn-big" onclick="toggleSong()">▶ Play Your Song</button>
+    <div id="karaoke-box">
+      <div id="karaoke-text" style="color:#c8a06a;font-size:19px">
+        Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>
+      </div>
+    </div>
+    <div id="play-status"></div>
+    <div id="play-actions">
+      <button id="again-btn" onclick="replaySong()">▶ Again</button>
+      <button id="save-btn" onclick="saveSong()">💾 Save</button>
+      <button id="restart-btn" onclick="restart()">🔄 New</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+// MUSIC DATA
+// ═══════════════════════════════════════════════════════
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const SCALES = { major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10] };
+
+const MOODS = [
+  { id:'happy',     emoji:'😊', en:'Happy',     cn:'开心',  key:'C', scale:'major', degs:[0,4,5,3], bpm:110 },
+  { id:'sad',       emoji:'😢', en:'Sad',       cn:'伤心',  key:'A', scale:'minor', degs:[0,3,4,0], bpm:70  },
+  { id:'peaceful',  emoji:'😌', en:'Peaceful',  cn:'平静',  key:'G', scale:'major', degs:[0,5,1,4], bpm:80, use7:true },
+  { id:'energetic', emoji:'💪', en:'Energetic', cn:'有活力', key:'E', scale:'major', degs:[0,3,4,3], bpm:130 },
+  { id:'loving',    emoji:'🥰', en:'Loving',    cn:'爱',    key:'F', scale:'major', degs:[0,2,5,3], bpm:90  },
+  { id:'nostalgic', emoji:'🤔', en:'Nostalgic', cn:'怀念',  key:'D', scale:'major', degs:[0,5,3,4], bpm:85  },
+];
+
+const RHYTHMS = [
+  { id:'gentle', emoji:'🎵', en:'Slow & Gentle', cn:'慢和轻柔',
+    kick: [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+    snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    hihat:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    clap: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+  { id:'steady', emoji:'🎶', en:'Steady Beat', cn:'平稳节拍',
+    kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    hihat:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+    clap: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] },
+  { id:'upbeat', emoji:'🥁', en:'Upbeat', cn:'活泼',
+    kick: [1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0],
+    snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1],
+    hihat:[1,0,1,0,1,0,1,0,1,1,1,0,1,0,1,0],
+    clap: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] },
+  { id:'lively', emoji:'💃', en:'Lively', cn:'热闹',
+    kick: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    snare:[0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1],
+    hihat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    clap: [0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0] },
+];
+
+const INSTRUMENTS = [
+  { id:'piano',      emoji:'🎹', en:'Piano',     cn:'钢琴',
+    osc:'triangle8', env:{attack:.02,decay:.5,sustain:.3,release:1.5}, vol:-9 },
+  { id:'guitar',     emoji:'🎸', en:'Guitar',    cn:'吉他',
+    osc:'sawtooth',  env:{attack:.001,decay:.22,sustain:0,release:.45}, vol:-10 },
+  { id:'oldies',     emoji:'🎷', en:'Oldies',    cn:'老歌',
+    osc:'sine',      env:{attack:.1,decay:.4,sustain:.85,release:2.5}, vol:-9 },
+  { id:'orchestra',  emoji:'🎻', en:'Orchestra', cn:'管弦乐',
+    osc:'triangle',  env:{attack:.4,decay:.5,sustain:.85,release:3.5}, vol:-8 },
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const S = { step:1, mood:null, rhythm:null, instrument:null, words:'', playing:false, played:false };
+
+// ═══════════════════════════════════════════════════════
+// MUSIC THEORY
+// ═══════════════════════════════════════════════════════
+function nMidi(name, oct){ return NOTES.indexOf(name) + (oct + 1) * 12; }
+
+// Build chord from the chord's own root in a given octave
+function buildChord(rootName, scaleName, deg, oct=4, add7=false){
+  const sc = SCALES[scaleName];
+  const scRI = NOTES.indexOf(rootName);
+  // Chord root = root + scale[deg] semitones
+  const chordRootIdx = (scRI + sc[deg]) % 12;
+  const chordBase = nMidi(NOTES[chordRootIdx], oct);
+  const midis = [chordBase]; let prev = chordBase;
+  const offsets = add7 ? [2,4,6] : [2,4];
+  for(const off of offsets){
+    const idx = (deg + off) % 7;
+    let sm = sc[idx] - sc[deg];
+    if(sm <= 0) sm += 12;
+    let m = chordBase + sm;
+    while(m <= prev) m += 12;
+    midis.push(m); prev = m;
+  }
+  return midis.map(m => Tone.Frequency(m,'midi').toNote());
+}
+
+function rootOfChord(rootName, scaleName, deg, oct=2){
+  const sc = SCALES[scaleName];
+  const chordRootIdx = (NOTES.indexOf(rootName) + sc[deg]) % 12;
+  return Tone.Frequency(nMidi(NOTES[chordRootIdx], oct), 'midi').toNote();
+}
+
+// ═══════════════════════════════════════════════════════
+// AUDIO NODES
+// ═══════════════════════════════════════════════════════
+const masterRev = new Tone.Reverb({ decay:2, wet:.14, preDelay:.01 });
+masterRev.generate().catch(()=>{});
+masterRev.toDestination();
+
+const dryBus = new Tone.Gain(1).toDestination();
+
+const kickS  = new Tone.MembraneSynth({pitchDecay:.05,octaves:7,envelope:{attack:.001,decay:.32,sustain:0,release:.1},volume:-3}).connect(dryBus);
+const snareS = new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0,release:.07},volume:-9}).connect(dryBus);
+const hihatS = new Tone.MetalSynth({frequency:400,harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5,envelope:{attack:.001,decay:.06,release:.01},volume:-15}).connect(dryBus);
+
+const chimeS = new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.2,sustain:0,release:.5},volume:-16}).connect(masterRev);
+
+let chordSyn = null, bassSyn = null;
+
+function makeChordSyn(inst){
+  try{ chordSyn?.dispose(); }catch(e){}
+  chordSyn = new Tone.PolySynth(Tone.Synth,{
+    oscillator:{type:inst.osc}, envelope:inst.env, volume:inst.vol
+  }).connect(masterRev);
+}
+function makeBassSyn(){
+  try{ bassSyn?.dispose(); }catch(e){}
+  bassSyn = new Tone.MonoSynth({
+    oscillator:{type:'sawtooth'},
+    filter:{Q:1.2,type:'lowpass',rolloff:-24},
+    envelope:{attack:.01,decay:.1,sustain:.8,release:.3},
+    filterEnvelope:{attack:.001,decay:.18,sustain:.4,release:.2,baseFrequency:160,octaves:3.5},
+    volume:-6,
+  }).connect(masterRev);
+}
+
+function chime(n='G5'){ try{ chimeS.triggerAttackRelease(n,'16n',Tone.now()); }catch(e){} }
+
+// ═══════════════════════════════════════════════════════
+// PREVIEW (Steps 2 & 3)
+// ═══════════════════════════════════════════════════════
+let previewSeq = null;
+
+function stopPreview(){
+  if(previewSeq){ try{ previewSeq.stop(); previewSeq.dispose(); }catch(e){} previewSeq=null; }
+  Tone.Transport.stop();
+  Tone.Transport.cancel();
+}
+
+async function previewRhythm(rhy){
+  await Tone.start(); stopPreview();
+  Tone.Transport.bpm.value = 100;
+  let bars = 0;
+  previewSeq = new Tone.Sequence((time,i)=>{
+    if(rhy.kick[i])  kickS.triggerAttackRelease('C1','16n',time);
+    if(rhy.snare[i]) snareS.triggerAttackRelease('8n',time);
+    if(rhy.hihat[i]) hihatS.triggerAttackRelease('C5','32n',time);
+    if(i===15){ bars++; if(bars>=2) setTimeout(stopPreview, 300); }
+  }, [...Array(16).keys()], '16n');
+  previewSeq.start(0);
+  Tone.Transport.start('+0.05');
+}
+
+async function previewInstrument(inst){
+  await Tone.start(); stopPreview();
+  makeChordSyn(inst);
+  const now = Tone.now();
+  chordSyn.triggerAttackRelease(['C4','E4','G4'], '2n', now + .1);
+  chordSyn.triggerAttackRelease(['G3','B3','D4'], '2n', now + 1.7);
+  chordSyn.triggerAttackRelease(['C4','E4','G4'], '2n', now + 3.2);
+}
+
+// ═══════════════════════════════════════════════════════
+// SONG PLAYBACK
+// ═══════════════════════════════════════════════════════
+let gstep = 0, songTimer = null, kTimers = [], countdown = null;
+
+function stopSong(){
+  S.playing = false;
+  clearTimeout(songTimer);
+  clearInterval(countdown);
+  kTimers.forEach(clearTimeout); kTimers = [];
+  Tone.Transport.stop(); Tone.Transport.cancel();
+  try{ chordSyn?.releaseAll(); }catch(e){}
+  const btn = document.getElementById('play-btn-big');
+  btn.textContent = '▶ Play Your Song';
+  btn.classList.remove('playing');
+  document.getElementById('play-status').textContent = '';
+}
+
+function replaySong(){ stopSong(); playSong(); }
+
+async function playSong(){
+  await Tone.start();
+  stopPreview();
+  const mood = S.mood, rhy = S.rhythm;
+  makeChordSyn(S.instrument);
+  makeBassSyn();
+
+  Tone.Transport.bpm.value = mood.bpm;
+  gstep = 0;
+
+  Tone.Transport.scheduleRepeat(time => {
+    const ds = gstep % 16;
+    const ci = Math.floor(gstep / 16) % mood.degs.length;
+    const deg = mood.degs[ci];
+
+    if(rhy.kick[ds])  kickS.triggerAttackRelease('C1','16n',time);
+    if(rhy.snare[ds]) snareS.triggerAttackRelease('8n',time);
+    if(rhy.hihat[ds]) hihatS.triggerAttackRelease('C5','32n',time);
+
+    if(ds === 0){
+      const notes = buildChord(mood.key, mood.scale, deg, 4, !!mood.use7);
+      try{ chordSyn.releaseAll(time); chordSyn.triggerAttackRelease(notes,'2n',time+.01); }catch(e){}
+      const bn = rootOfChord(mood.key, mood.scale, deg, 2);
+      try{ bassSyn.triggerAttackRelease(bn,'4n',time+.01); }catch(e){}
+    }
+    gstep++;
+  }, '16n');
+
+  Tone.Transport.start('+0.1');
+  S.playing = true;
+
+  const btn = document.getElementById('play-btn-big');
+  btn.textContent = '⏸ Playing...';
+  btn.classList.add('playing');
+
+  // Karaoke
+  if(S.words.trim()){
+    startKaraoke(S.words.trim(), 30000);
+  } else {
+    document.getElementById('karaoke-text').innerHTML =
+      `<span style="font-size:60px">${mood.emoji}</span><br>
+       <span style="color:#c05c1a;font-size:25px;font-weight:800">${mood.en}</span>
+       <span style="color:#7a5a3a;font-size:20px"> · ${mood.cn}</span>`;
+  }
+
+  // Countdown
+  let secs = 30;
+  const statusEl = document.getElementById('play-status');
+  statusEl.textContent = '🎵 30s remaining...';
+  countdown = setInterval(()=>{
+    secs--;
+    if(secs > 0) statusEl.textContent = `🎵 ${secs}s remaining...`;
+    else clearInterval(countdown);
+  }, 1000);
+
+  // Auto-stop at 30s
+  songTimer = setTimeout(()=>{
+    clearInterval(countdown);
+    stopSong();
+    statusEl.textContent = '🎉 That\'s your song! 你的歌做好了！';
+    btn.textContent = '▶ Play Again';
+  }, 30000);
+
+  if(!S.played){ S.played=true; launchConfetti(); }
+}
+
+function toggleSong(){
+  if(S.playing) stopSong();
+  else playSong();
+}
+
+// ═══════════════════════════════════════════════════════
+// KARAOKE
+// ═══════════════════════════════════════════════════════
+function startKaraoke(text, totalMs){
+  const words = text.split(/\s+/).filter(Boolean);
+  if(!words.length) return;
+  const box = document.getElementById('karaoke-text');
+  box.innerHTML = words.map((w,i)=>`<span class="kw" id="kw${i}">${w}</span>`).join(' ');
+  const each = totalMs / words.length;
+  words.forEach((_,i)=>{
+    kTimers.push(setTimeout(()=>{
+      document.querySelectorAll('.kw').forEach(e=>e.classList.remove('hi'));
+      document.getElementById(`kw${i}`)?.classList.add('hi');
+    }, i * each));
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// SAVE
+// ═══════════════════════════════════════════════════════
+function saveSong(){
+  const mood = S.mood;
+  const words = S.words || '(No words added)';
+  const txt = `🎵 My Song — made with Song Maker
+──────────────────────
+Mood: ${mood.emoji} ${mood.en} (${mood.cn})
+Rhythm: ${S.rhythm.en} (${S.rhythm.cn})
+Sound: ${S.instrument.en} (${S.instrument.cn})
+
+Words:
+${words}
+──────────────────────
+Made with love ❤️`;
+  const blob = new Blob([txt],{type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='my-song.txt'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFETTI
+// ═══════════════════════════════════════════════════════
+function launchConfetti(){
+  const cols=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9a3c','#c77dff','#ff70a6','#38d9a9'];
+  for(let i=0;i<72;i++){
+    const el = document.createElement('div');
+    const sz = 8 + Math.random()*10;
+    el.style.cssText = [
+      'position:fixed','pointer-events:none','z-index:9999',
+      `left:${Math.random()*100}%`,'top:-15px',
+      `width:${sz}px`,`height:${sz}px`,
+      `background:${cols[i%cols.length]}`,
+      `border-radius:${Math.random()>.5?'50%':'3px'}`,
+      `animation:confFall ${1.5+Math.random()*2.5}s ease-in forwards`,
+      `animation-delay:${Math.random()*.7}s`,
+    ].join(';');
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 4500);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function goToStep(n){
+  stopPreview();
+  document.getElementById(`step-${S.step}`)?.classList.remove('active');
+  S.step = n;
+  document.getElementById(`step-${n}`)?.classList.add('active');
+  updateDots();
+  if(n === 5){
+    S.words = document.getElementById('words-area').value;
+    document.getElementById('karaoke-text').innerHTML =
+      'Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>';
+    document.getElementById('play-status').textContent = '';
+    document.getElementById('play-btn-big').textContent = '▶ Play Your Song';
+    document.getElementById('play-btn-big').classList.remove('playing');
+    S.playing = false; S.played = false;
+    stopSong();
+  }
+}
+function goNext(){ if(S.step < 5) goToStep(S.step + 1); }
+function goBack(){ stopSong(); if(S.step > 1) goToStep(S.step - 1); }
+function skipWords(){ S.words=''; document.getElementById('words-area').value=''; goToStep(5); }
+function tmpl(t){ const ta=document.getElementById('words-area'); ta.value=t; ta.focus(); ta.setSelectionRange(t.length,t.length); }
+
+function restart(){
+  stopSong(); stopPreview();
+  S.mood=null; S.rhythm=null; S.instrument=null; S.words=''; S.played=false;
+  document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('selected'));
+  ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('words-area').value='';
+  goToStep(1);
+}
+
+function updateDots(){
+  for(let i=1;i<=5;i++){
+    const d = document.getElementById(`d${i}`);
+    d.classList.remove('active','done');
+    if(i < S.step)       d.classList.add('done');
+    else if(i === S.step) d.classList.add('active');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER BUTTONS
+// ═══════════════════════════════════════════════════════
+function renderMoods(){
+  const grid = document.getElementById('mood-grid');
+  MOODS.forEach(m=>{
+    const b = document.createElement('button');
+    b.className='cbtn';
+    b.innerHTML=`<span class="em">${m.emoji}</span><span class="en">${m.en}</span><span class="cn">${m.cn}</span>`;
+    b.onclick = async ()=>{
+      await Tone.start(); chime('G5');
+      grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      S.mood = m;
+      document.getElementById('next-1').disabled = false;
+    };
+    grid.appendChild(b);
+  });
+}
+
+function renderRhythms(){
+  const grid = document.getElementById('rhythm-grid');
+  RHYTHMS.forEach(r=>{
+    const b = document.createElement('button');
+    b.className='cbtn';
+    b.innerHTML=`<span class="em">${r.emoji}</span><span class="en">${r.en}</span><span class="cn">${r.cn}</span><span class="phint">▶ tap to preview</span>`;
+    b.onclick = async ()=>{
+      await Tone.start(); chime('A5');
+      grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      S.rhythm = r;
+      document.getElementById('next-2').disabled = false;
+      previewRhythm(r);
+    };
+    grid.appendChild(b);
+  });
+}
+
+function renderInstruments(){
+  const grid = document.getElementById('instrument-grid');
+  INSTRUMENTS.forEach(inst=>{
+    const b = document.createElement('button');
+    b.className='cbtn';
+    b.innerHTML=`<span class="em">${inst.emoji}</span><span class="en">${inst.en}</span><span class="cn">${inst.cn}</span><span class="phint">▶ tap to preview</span>`;
+    b.onclick = async ()=>{
+      await Tone.start(); chime('B5');
+      grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      S.instrument = inst;
+      document.getElementById('next-3').disabled = false;
+      previewInstrument(inst);
+    };
+    grid.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderMoods();
+renderRhythms();
+renderInstruments();
+</script>
+</body>
+</html>
