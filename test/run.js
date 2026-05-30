@@ -430,6 +430,29 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ TIER B/C BATCH 3 — hum robustness + guided coach (round 11) ═══
+
+test('hum has a no-penalty Try-again button', (app) => {
+  const { $ } = app;
+  ok($('#hum-retry'), 'retry button exists');
+  ok($('#hum-retry').hidden, 'retry hidden until a failed attempt');
+});
+
+test('guided coach steps through and is replayable', (app) => {
+  const { $, $$, window: W } = app;
+  W.openCoach();
+  ok(!$('#coach').hidden, 'coach opens');
+  ok($$('#coach-dots .d').length === 5, '5 steps');
+  ok($('#coach-title').textContent.includes('Welcome'), 'starts at welcome');
+  for(let i=0;i<4;i++) W.coachNext();
+  ok($('#coach-next').textContent.includes('Start'), 'last step shows Start');
+  W.coachNext();                               // finishes
+  ok($('#coach').hidden, 'coach closes at end');
+  ok(W.localStorage.getItem('sk.coached')==='1', 'coached flag set so it does not auto-show again');
+  W.openCoach();                               // replayable from ❓
+  ok(!$('#coach').hidden, 'reopens on demand');
+});
+
 // ═══ TIER A BATCH 2 — fit check + big chorus (round 10) ═══
 
 test('countSyllables handles EN + 中文', (app) => {
