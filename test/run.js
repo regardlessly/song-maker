@@ -430,6 +430,44 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ TIER A BATCH 2 — fit check + big chorus (round 10) ═══
+
+test('countSyllables handles EN + 中文', (app) => {
+  const { window: W } = app;
+  eq(W.countSyllables('hello world'), 3, 'hello(2)+world(1)');
+  eq(W.countSyllables('好一朵美丽的茉莉花'), 9, 'nine Chinese characters = nine');
+});
+
+test('fit check lists lyric lines with a per-line beat count', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);                       // helpWrite filled lyrics
+  W.openFit();
+  ok(!$('#fit').hidden, 'fit sheet open');
+  ok($$('#fit-list .fit-line').length >= 2, 'lists lyric lines (skips (Verse) tags)');
+  ok($('#fit-tip').textContent.includes('beats per line'), 'shows the target guidance');
+  W.closeFit();
+  ok($('#fit').hidden, 'fit sheet closes');
+});
+
+test('big chorus octave-doubles the melody in the chorus only', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);                       // Happy C major, classic (chorus = bars 12..19)
+  W.setMelody('tiger');
+  W.toggleBigChorus();
+  W.buildPlan();
+  const chorus = W.stepActions(12*16);           // chorus downbeat
+  ok(chorus.melody && chorus.melodyHi, 'chorus has both the melody and its octave double');
+  const verse = W.stepActions(4*16);             // verse downbeat
+  ok(!verse.melodyHi, 'verse is NOT doubled (chorus-only)');
+});
+
+test('big chorus survives a share round-trip', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.toggleBigChorus();
+  eq(W.decodeState(W.encodeState()).bc, 1, 'big chorus flag encoded');
+});
+
 // ═══ TIER B/C BATCH 1 (round 9) ═══
 
 test('reminiscence prompt deck fills the words box', async (app) => {

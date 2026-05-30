@@ -223,6 +223,20 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 #chords .close{width:100%;margin-top:6px;padding:14px;font-size:18px;font-weight:800;border-radius:13px;
   border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
 
+/* ── Fit check overlay ── */
+#fit{position:fixed;inset:0;z-index:6100;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
+#fit[hidden]{display:none}
+#fit .sheet{background:#fffaf4;border-radius:18px;padding:22px;max-width:620px;width:100%;max-height:84vh;overflow:auto}
+#fit h2{color:#2a1600;font-size:21px;margin-bottom:8px;text-align:center}
+#fit-tip{text-align:center;color:#7a5a3a;font-weight:700;margin-bottom:12px;font-size:15px}
+#fit-list .empty{text-align:center;color:#b8906a;padding:18px 0;font-size:16px}
+.fit-line{display:flex;gap:10px;align-items:center;justify-content:space-between;border:2px solid #e5cfb5;border-radius:11px;padding:10px 12px;margin-bottom:8px}
+.fit-line .fl{color:#2a1600;font-weight:700;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fit-line .fc{flex:0 0 auto;font-size:13px;font-weight:800;white-space:nowrap}
+.fit-ok{border-color:#388a3c}.fit-ok .fc{color:#388a3c}
+.fit-warn{border-color:#c8a06a;background:#fff8ef}.fit-warn .fc{color:#c05c1a}
+#fit .close{width:100%;margin-top:6px;padding:14px;font-size:18px;font-weight:800;border-radius:13px;border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
+
 /* ── Hum overlay ── */
 #hum{position:fixed;inset:0;z-index:6200;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
 #hum[hidden]{display:none}
@@ -352,6 +366,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <button class="go" onclick="startHum()">🎤 Hum your own tune · 哼出你的旋律</button>
     </div>
     <div class="ctrl-row">
+      <button onclick="openFit()">🎯 Do my words fit the tune? · 歌词对齐</button>
+    </div>
+    <div class="ctrl-row">
       <button id="tempo-btn" onclick="toggleTempo()">🐢 Slower<br><span style="font-size:11px">慢一点</span></button>
       <button onclick="changeKey(-1)">🔽 Lower<br><span style="font-size:11px">低音</span></button>
       <button onclick="changeKey(1)">🔼 Higher<br><span style="font-size:11px">高音</span></button>
@@ -417,6 +434,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <span>⬆ Make the chorus lift · 副歌升级</span>
       <button id="lift-toggle" onclick="toggleChorusLift()">Off 关</button>
     </div>
+    <div class="lift-row">
+      <span>🔊 Big chorus (fuller, doubled) · 副歌加强</span>
+      <button id="big-toggle" onclick="toggleBigChorus()">Off 关</button>
+    </div>
     <div id="chords-list"></div>
     <button class="close" onclick="closeChords()">Done 完成</button>
   </div>
@@ -430,6 +451,16 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
     <div id="hum-note">3</div>
     <button id="hum-stop" onclick="stopHum()">✓ Done — use my tune · 完成</button>
     <button id="hum-cancel" onclick="cancelHum()">Cancel 取消</button>
+  </div>
+</div>
+
+<!-- Fit check overlay -->
+<div id="fit" hidden>
+  <div class="sheet">
+    <h2>🎯 Do your words fit the tune? · 歌词对齐</h2>
+    <div id="fit-tip"></div>
+    <div id="fit-list"></div>
+    <button class="close" onclick="closeFit()">Done 完成</button>
   </div>
 </div>
 
@@ -624,7 +655,7 @@ const LYRICS = {
 const S = {
   step:1, mood:null, rhythm:null, instrument:null, structure:STRUCTURES[1],
   title:'', words:'', transpose:0, tempoMul:1, playing:false, played:false,
-  progression:null, chorusLift:false,   // null progression = use the mood's own chords
+  progression:null, chorusLift:false, bigChorus:false,   // null progression = use the mood's own chords
   melody:null,                          // null = auto chord-tone melody; else a MELODIES entry
 };
 let ttsOn = false;
@@ -686,7 +717,7 @@ function buildMelodyGrid(totalSteps){
   let g = 0, idx = 0, guard = 0;
   while(g < totalSteps && guard < 100000){
     const [off, dur] = notes[idx % notes.length];
-    if(off !== null && g < totalSteps) melodyGrid[g] = { note: toNoteT(tonic + off), steps: dur };
+    if(off !== null && g < totalSteps) melodyGrid[g] = { note: toNoteT(tonic + off), midi: tonic + off + (S.transpose||0), steps: dur };
     g += dur; idx++; guard++;
   }
 }
@@ -715,7 +746,10 @@ function stepActions(g){
   }
   if(S.melody && S.melody.notes){
     const mn = melodyGrid[g];                       // a chosen, recognizable tune
-    if(mn){ a.melody = mn.note; a.melodyDur = mn.steps * (60/curBpm)/4; }
+    if(mn){
+      a.melody = mn.note; a.melodyDur = mn.steps * (60/curBpm)/4;
+      if(S.bigChorus && type === 'chorus' && mn.midi != null) a.melodyHi = Tone.Frequency(mn.midi + 12, 'midi').toNote();
+    }
   } else if(arr.melody && ds % 4 === 0){
     a.melody = melodyNote(S.mood.key, S.mood.scale, deg, ds / 4);  // auto chord-tone line
   }
@@ -735,7 +769,7 @@ const snareS = new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,d
 const hihatS = new Tone.MetalSynth({frequency:400,harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5,envelope:{attack:.001,decay:.06,release:.01},volume:-15}).connect(dryBus);
 const chimeS = new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.2,sustain:0,release:.5},volume:-16}).connect(masterRev);
 
-let chordSyn=null, bassSyn=null, melSyn=null;
+let chordSyn=null, bassSyn=null, melSyn=null, melSyn2=null;
 function makeChordSyn(inst){
   try{ chordSyn?.dispose(); }catch(e){}
   chordSyn = new Tone.PolySynth(Tone.Synth,{oscillator:{type:inst.osc},envelope:inst.env,volume:inst.vol}).connect(masterRev);
@@ -749,6 +783,8 @@ function makeBassSyn(){
 function makeMelSyn(){
   try{ melSyn?.dispose(); }catch(e){}
   melSyn = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-11}).connect(masterRev);
+  try{ melSyn2?.dispose(); }catch(e){}
+  melSyn2 = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-17}).connect(masterRev);
 }
 function chime(n='G5'){ try{ chimeS.triggerAttackRelease(n,'16n',Tone.now()); }catch(e){} }
 
@@ -796,6 +832,7 @@ function fireStep(a, time){
   if(a.chord){ try{ chordSyn.releaseAll(time); chordSyn.triggerAttackRelease(a.chord,'2n',time+.01,a.chordVel); }catch(e){} }
   if(a.bass)   try{ bassSyn.triggerAttackRelease(a.bass,'4n',time+.01); }catch(e){}
   if(a.melody) try{ melSyn.triggerAttackRelease(a.melody, a.melodyDur||'4n', time+.01); }catch(e){}
+  if(a.melodyHi) try{ melSyn2.triggerAttackRelease(a.melodyHi, a.melodyDur||'4n', time+.01); }catch(e){}
 }
 
 // First [start,end) bar range of a section type in the current plan (null if absent)
@@ -1345,6 +1382,14 @@ function toggleChorusLift(){
   if(S.playing) replaySong();
   toast(S.chorusLift ? '⬆ Chorus will lift 副歌升级' : 'Chorus lift off 已关闭');
 }
+function toggleBigChorus(){
+  S.bigChorus = !S.bigChorus;
+  const b = document.getElementById('big-toggle');
+  if(b){ b.classList.toggle('on', S.bigChorus); b.textContent = S.bigChorus ? 'On 开' : 'Off 关'; }
+  persistDraft(); updateSongInfo();
+  if(S.playing) replaySong();
+  toast(S.bigChorus ? '🔊 Big chorus on 副歌加强' : 'Big chorus off 已关闭');
+}
 async function previewProgression(p){
   try{ await Tone.start(); }catch(e){}
   stopPreview(); ensureSynths();
@@ -1376,9 +1421,43 @@ function openChords(){
   const b = document.getElementById('lift-toggle');
   b.classList.toggle('on', S.chorusLift);
   b.textContent = S.chorusLift ? 'On 开' : 'Off 关';
+  const bb = document.getElementById('big-toggle');
+  bb.classList.toggle('on', S.bigChorus);
+  bb.textContent = S.bigChorus ? 'On 开' : 'Off 关';
   document.getElementById('chords').hidden = false;
 }
 function closeChords(){ stopPreview(); document.getElementById('chords').hidden = true; }
+
+// #2 — does my line fit the tune? Count singable beats per line vs the melody.
+function countSyllables(line){
+  const cjk = (line.match(/[一-鿿]/g) || []).length;                 // each Chinese char ≈ 1 syllable
+  const enWords = line.replace(/[一-鿿]/g,' ').toLowerCase().match(/[a-z]+/g) || [];
+  let en = 0; for(const w of enWords){ en += (w.match(/[aeiouy]+/g) || ['x']).length; }
+  return cjk + en;
+}
+function openFit(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  const lines = (S.words || '').split('\n').map(l=>l.trim()).filter(l => l && !/^[(（].*[)）]$/.test(l)); // skip (Verse) tags
+  const list = document.getElementById('fit-list');
+  let target = 8;
+  if(S.melody && S.melody.notes){
+    const n = S.melody.notes.filter(x=>x[0]!==null).length;
+    target = Math.max(4, Math.min(12, Math.round(n / Math.max(1, Math.min(lines.length || 1, 8)))));
+  }
+  if(!lines.length){
+    list.innerHTML = '<div class="empty">No words yet — tap ✨ Help me write or 💭 a song idea first.<br>还没有歌词。</div>';
+  } else {
+    list.innerHTML = lines.map(l=>{
+      const s = countSyllables(l);
+      const ok = s >= Math.max(3, target-3) && s <= target+3;
+      const mark = ok ? '✓ fits' : (s > target+3 ? '✂ a bit long' : '＋ a bit short');
+      return `<div class="fit-line ${ok?'fit-ok':'fit-warn'}"><span class="fl">${esc(l)}</span><span class="fc">${s}♪ ${mark}</span></div>`;
+    }).join('');
+  }
+  document.getElementById('fit-tip').textContent = `Aim for about ${target} beats per line · 每句大约 ${target} 个音`;
+  document.getElementById('fit').hidden = false;
+}
+function closeFit(){ document.getElementById('fit').hidden = true; }
 
 // ── Melody picker + the "what's in your song" readout ──
 function renderMelodies(){
@@ -1588,6 +1667,7 @@ async function saveWav(){
       const chord = new Tone.PolySynth(Tone.Synth,{oscillator:{type:inst.osc},envelope:inst.env,volume:inst.vol}).connect(rev);
       const bass  = new Tone.MonoSynth({oscillator:{type:'sawtooth'},filter:{Q:1.2,type:'lowpass',rolloff:-24},envelope:{attack:.01,decay:.1,sustain:.8,release:.3},filterEnvelope:{attack:.001,decay:.18,sustain:.4,release:.2,baseFrequency:160,octaves:3.5},volume:-6}).connect(rev);
       const mel   = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-11}).connect(rev);
+      const mel2  = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-17}).connect(rev);
       for(let g=0; g<totalSteps; g++){
         const t = g*sixteenth, a = stepActions(g);
         if(a.kick)  kick.triggerAttackRelease('C1','16n',t);
@@ -1597,6 +1677,7 @@ async function saveWav(){
         if(a.chord) chord.triggerAttackRelease(a.chord,'2n',t+.01,a.chordVel);
         if(a.bass)  bass.triggerAttackRelease(a.bass,'4n',t+.01);
         if(a.melody)mel.triggerAttackRelease(a.melody, a.melodyDur||'4n', t+.01);
+        if(a.melodyHi)mel2.triggerAttackRelease(a.melodyHi, a.melodyDur||'4n', t+.01);
       }
     }, dur);
     const ab = buffer.get ? buffer.get() : buffer;
@@ -1667,7 +1748,7 @@ function saveToBook(){
     title, when: new Date().toLocaleDateString(),
     mood:S.mood.id, rhythm:S.rhythm?.id, instrument:S.instrument?.id,
     structure:S.structure.id, words:S.words, transpose:S.transpose, tempoMul:S.tempoMul,
-    progression:S.progression?S.progression.id:null, chorusLift:S.chorusLift?1:0,
+    progression:S.progression?S.progression.id:null, chorusLift:S.chorusLift?1:0, bigChorus:S.bigChorus?1:0,
     melody:S.melody?S.melody.id:null,
     humNotes:(S.melody && S.melody.id==='hum') ? S.melody.notes : null,
   });
@@ -1689,6 +1770,7 @@ function applyEntry(e){
   const ep = e.progression ? PROGRESSIONS.find(x=>x.id===e.progression) : null;
   S.progression = (ep && ep.degs) ? ep : null;
   S.chorusLift = !!e.chorusLift;
+  S.bigChorus = !!e.bigChorus;
   if(e.melody === 'hum' && e.humNotes && e.humNotes.length){
     hummedMelody = { id:'hum', en:'My hum', cn:'我的旋律', notes:e.humNotes };
     S.melody = hummedMelody; renderMelodies();
@@ -1809,7 +1891,7 @@ function restart(){
   stopSong(); stopPreview();
   S.mood=null; S.rhythm=null; S.instrument=null; S.structure=STRUCTURES[1];
   S.title=''; S.words=''; S.transpose=0; S.tempoMul=1; S.played=false;
-  S.progression=null; S.chorusLift=false; S.melody=null;
+  S.progression=null; S.chorusLift=false; S.bigChorus=false; S.melody=null;
   { const ms=document.getElementById('mel-select'); if(ms) ms.value='auto'; }
   document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('selected'));
   ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=true);
@@ -1919,7 +2001,7 @@ function applyTemplate(id){
   S.rhythm = RHYTHMS.find(r=>r.id===t.rhythm) || RHYTHMS[1];
   S.instrument = INSTRUMENTS.find(i=>i.id===t.instrument) || INSTRUMENTS[2];
   S.structure = STRUCTURES.find(s=>s.id===t.structure) || STRUCTURES[1];
-  S.progression = null; S.chorusLift = false; S.transpose = 0; S.tempoMul = 1; S.played = false; S.melody = null;
+  S.progression = null; S.chorusLift = false; S.bigChorus = false; S.transpose = 0; S.tempoMul = 1; S.played = false; S.melody = null;
   S.title = t.cn + '（我的版本）';
   document.getElementById('words-area').value = '';
   document.getElementById('title-area').value = S.title;
@@ -1955,7 +2037,7 @@ function slug(s){ return String(s||'song').toLowerCase().replace(/[^a-z0-9]+/g,'
 function encodeState(){
   const o = { t:S.title, m:S.mood&&S.mood.id, r:S.rhythm&&S.rhythm.id, i:S.instrument&&S.instrument.id,
               s:S.structure.id, w:S.words, tr:S.transpose, tm:S.tempoMul,
-              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0, ml:S.melody?S.melody.id:null,
+              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0, bc:S.bigChorus?1:0, ml:S.melody?S.melody.id:null,
               hn:(S.melody && S.melody.id==='hum') ? S.melody.notes : undefined };
   try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }catch(e){ return ''; }
 }
@@ -1964,7 +2046,7 @@ function decodeState(str){
 }
 function stateToEntry(st){
   return { title:st.t, mood:st.m, rhythm:st.r, instrument:st.i, structure:st.s, words:st.w,
-           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl, melody:st.ml, humNotes:st.hn };
+           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl, bigChorus:st.bc, melody:st.ml, humNotes:st.hn };
 }
 function shareLink(){
   if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
@@ -2034,7 +2116,7 @@ function printLyricSheet(){
 karaokeTarget = document.getElementById('karaoke-text');
 renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies(); renderPrompts();
 try{ const z=parseFloat(localStorage.getItem('sk.zoom')); if(z && ZOOMS.includes(z)){ zoomLevel=z; applyZoom(); } }catch(e){}
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('fit').hidden) closeFit(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Number keys trigger jam pads (only while the jam pad is open)
 document.addEventListener('keydown', e=>{
