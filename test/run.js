@@ -371,6 +371,56 @@ test('enterStage (async, with audible count-in) does not throw', async (app) => 
   ok($('#stage').hidden, 'stage closed');
 });
 
+// ═══ CLASSIC-SONG TEMPLATE DROPDOWN (round 6) ═══
+
+test('template dropdown is populated with grouped songs', (app) => {
+  const { $, $$ } = app;
+  const opts = $$('#tpl-select option');
+  ok(opts.length >= 37, '36 songs + placeholder');
+  ok($$('#tpl-select optgroup').length >= 5, 'grouped by genre/artist');
+  ok($$('#tpl-select option').some(o=>o.textContent.includes('月亮代表我的心')), 'includes The Moon Represents My Heart');
+});
+
+test('picking a template sets its musical base and jumps to studio', async (app) => {
+  const { $, window: W, tick } = app;
+  W.applyTemplate('S01');           // Moon Represents My Heart: C major, 8-chord descending ballad
+  await tick();
+  ok($('#step-6').classList.contains('active'), 'lands on studio');
+  W.buildPlan();
+  eq(W.stepActions(0).chord[0], 'C4', 'bar 0 = I = C');
+  eq(W.stepActions(16).chord[0], 'G4', 'bar 1 = V = G (template progression)');
+  // its degs cycle over 8 bars, not 4
+  eq(W.stepActions(3*16).chord[0], 'E4', 'bar 3 = iii = Em root E (8-bar cycle)');
+});
+
+test('a minor-key template builds minor chords', async (app) => {
+  const { window: W, tick } = app;
+  W.applyTemplate('S16');           // The Bund: A minor, i-VI-III-VII
+  await tick();
+  W.buildPlan();
+  eq(W.stepActions(0).chord[0], 'A4', 'bar 0 = i = A');
+  eq(W.stepActions(16).chord[0], 'F4', 'bar 1 = VI = F');
+});
+
+test('template choice survives a share-link round-trip', async (app) => {
+  const { window: W, tick } = app;
+  W.applyTemplate('S03'); await tick();
+  const code = W.encodeState();
+  eq(W.decodeState(code).m, 'tpl_S03', 'template id encoded in the share state');
+  // rebuild from the entry and confirm chords come back
+  W.applyEntry(W.stateToEntry(W.decodeState(code)));
+  W.buildPlan();
+  eq(W.stepActions(0).chord[0], 'C4', 'rebuilt template still plays its chords');
+});
+
+test('restart clears the template selection', async (app) => {
+  const { $, window: W, tick } = app;
+  W.applyTemplate('S31'); await tick();
+  W.restart();
+  eq($('#tpl-select').value, '', 'dropdown reset to placeholder');
+  ok($('#step-1').classList.contains('active'), 'back on step 1');
+});
+
 // ═══ OPTION A — real-song progression + chorus lift (round 5) ═══
 
 test('changing the progression changes the actual song chords', async (app) => {

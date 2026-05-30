@@ -36,7 +36,15 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 .step-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 
 /* ── Grids ── */
-.mood-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:9px;height:100%}
+#step-1 .step-content{gap:10px}
+.tpl-row{flex-shrink:0;display:flex;flex-direction:column;gap:5px}
+.tpl-row label{font-size:14px;font-weight:700;color:#7a5a3a}
+#tpl-select{width:100%;padding:13px 12px;font-size:17px;font-weight:700;border:2.5px solid #c8a06a;
+  border-radius:12px;background:#fffaf4;color:#2a1600;min-height:52px;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,#c05c1a 50%),linear-gradient(135deg,#c05c1a 50%,transparent 50%);
+  background-position:calc(100% - 20px) 22px,calc(100% - 14px) 22px;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+#tpl-select:focus{border-color:#c05c1a;outline:none}
+.mood-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:9px;flex:1;min-height:0}
 .choice-grid{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:12px;height:100%}
 .list-grid{display:flex;flex-direction:column;gap:12px;height:100%;justify-content:center}
 .list-grid .cbtn{flex-direction:row;justify-content:flex-start;gap:16px;min-height:74px;padding:14px 20px;text-align:left}
@@ -240,7 +248,13 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 <!-- STEP 1: MOOD -->
 <div class="step active" id="step-1">
   <div class="step-title"><h1>How are you feeling today?</h1><span class="cn">你今天心情如何？</span></div>
-  <div class="step-content"><div class="mood-grid" id="mood-grid"></div></div>
+  <div class="step-content">
+    <div class="tpl-row">
+      <label for="tpl-select">🎼 …or start from a classic song · 选一首经典老歌</label>
+      <select id="tpl-select" onchange="applyTemplate(this.value)"></select>
+    </div>
+    <div class="mood-grid" id="mood-grid"></div>
+  </div>
   <div class="step-nav">
     <button class="back-btn" onclick="surpriseMe()" style="min-width:118px">🎲 Surprise<br><span style="font-size:12px;font-weight:600">随机一首</span></button>
     <button class="next-btn" id="next-1" disabled onclick="goNext()">Next ➡</button>
@@ -461,6 +475,53 @@ const SEC_LABEL = {
 };
 // When "chorus lift" is on, the chorus uses these chords (IV–V–vi–I) for a classic uplifting feel.
 const CHORUS_LIFT = [3,4,5,0];
+
+// ── Classic-song templates (from the Chinese Classic Songs library) ──
+// We use only the musical *base* (key / tempo / chord progression / structure) as a
+// familiar starting feel — NOT the copyrighted melody or lyrics. Seniors pick a song
+// they know, then write their own words over that base. degs = scale-degree indices.
+const SONG_TEMPLATES = [
+  {id:"S01",cn:"月亮代表我的心",rom:"Yue Liang Dai Biao Wo De Xin",en:"The Moon Represents My Heart",artist:"Teresa Teng",year:"1977",key:"C",scale:"major",bpm:72,degs:[0,4,5,2,3,0,3,4],use7:true,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"💕",grp:"teng"},
+  {id:"S02",cn:"甜蜜蜜",rom:"Tian Mi Mi",en:"Sweet Honey",artist:"Teresa Teng",year:"1979",key:"C",scale:"major",bpm:108,degs:[0,3,4,0],use7:false,rhythm:"upbeat",instrument:"guitar",structure:"classic",emoji:"💕",grp:"teng"},
+  {id:"S03",cn:"我只在乎你",rom:"Wo Zhi Zai Hu Ni",en:"I Only Care About You",artist:"Teresa Teng",year:"1987",key:"C",scale:"major",bpm:66,degs:[0,5,1,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"full",emoji:"💕",grp:"teng"},
+  {id:"S04",cn:"小城故事",rom:"Xiao Cheng Gu Shi",en:"Small Town Story",artist:"Teresa Teng",year:"1979",key:"G",scale:"major",bpm:96,degs:[0,5,3,4],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"🌿",grp:"teng"},
+  {id:"S05",cn:"何日君再來",rom:"He Ri Jun Zai Lai",en:"When Will You Return",artist:"Zhou Xuan / Teresa Teng",year:"1937",key:"A",scale:"minor",bpm:92,degs:[0,3,4,0],use7:false,rhythm:"steady",instrument:"orchestra",structure:"classic",emoji:"🍂",grp:"teng"},
+  {id:"S06",cn:"夜來香",rom:"Ye Lai Xiang",en:"Tuberose",artist:"Li Xianglan / Teresa Teng",year:"1944",key:"C",scale:"major",bpm:120,degs:[0,5,1,4],use7:true,rhythm:"upbeat",instrument:"oldies",structure:"classic",emoji:"💕",grp:"teng"},
+  {id:"S07",cn:"在水一方",rom:"Zai Shui Yi Fang",en:"The Other Shore",artist:"Teresa Teng",year:"1980",key:"D",scale:"major",bpm:76,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"guitar",structure:"classic",emoji:"🌿",grp:"teng"},
+  {id:"S08",cn:"又見炊煙",rom:"You Jian Chui Yan",en:"Seeing the Cooking Smoke Again",artist:"Teresa Teng",year:"1979",key:"G",scale:"major",bpm:84,degs:[0,3,0,4],use7:false,rhythm:"steady",instrument:"guitar",structure:"classic",emoji:"🌿",grp:"teng"},
+  {id:"S09",cn:"你怎麼說",rom:"Ni Zen Me Shuo",en:"How Can You Say That",artist:"Teresa Teng",year:"1980",key:"C",scale:"major",bpm:118,degs:[0,5,3,4],use7:false,rhythm:"upbeat",instrument:"oldies",structure:"classic",emoji:"💃",grp:"teng"},
+  {id:"S10",cn:"償還",rom:"Chang Huan",en:"Repayment",artist:"Teresa Teng",year:"1984",key:"C",scale:"major",bpm:80,degs:[0,4,5,3],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"💕",grp:"teng"},
+  {id:"S11",cn:"千言萬語",rom:"Qian Yan Wan Yu",en:"Thousands of Words",artist:"Teresa Teng",year:"1973",key:"C",scale:"major",bpm:96,degs:[0,5,1,4],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"🎵",grp:"teng"},
+  {id:"S12",cn:"漫步人生路",rom:"Man Bu Ren Sheng Lu",en:"Stroll Through Life",artist:"Teresa Teng",year:"1983",key:"D",scale:"major",bpm:92,degs:[0,4,5,3],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"🎵",grp:"teng"},
+  {id:"S13",cn:"夜上海",rom:"Ye Shanghai",en:"Shanghai Nights",artist:"Zhou Xuan",year:"1947",key:"C",scale:"major",bpm:126,degs:[0,5,1,4],use7:true,rhythm:"lively",instrument:"oldies",structure:"classic",emoji:"🌙",grp:"shidaiqu"},
+  {id:"S14",cn:"天涯歌女",rom:"Tian Ya Ge Nü",en:"The Wandering Songstress",artist:"Zhou Xuan",year:"1937",key:"D",scale:"major",bpm:100,degs:[0,3,4],use7:false,rhythm:"steady",instrument:"guitar",structure:"short",emoji:"🎵",grp:"shidaiqu"},
+  {id:"S15",cn:"玫瑰玫瑰我愛你",rom:"Mei Gui Mei Gui Wo Ai Ni",en:"Rose, Rose I Love You",artist:"Yao Lee",year:"1940",key:"C",scale:"major",bpm:132,degs:[0,5,1,4],use7:true,rhythm:"lively",instrument:"oldies",structure:"classic",emoji:"💃",grp:"shidaiqu"},
+  {id:"S16",cn:"上海灘",rom:"Shanghai Tan",en:"The Bund",artist:"Frances Yip",year:"1980",key:"A",scale:"minor",bpm:108,degs:[0,5,2,6],use7:false,rhythm:"upbeat",instrument:"orchestra",structure:"classic",emoji:"🔥",grp:"canto"},
+  {id:"S17",cn:"月半小夜曲",rom:"Yue Ban Xiao Ye Qu",en:"Half Moon Serenade",artist:"Lowell Lo",year:"1987",key:"C",scale:"major",bpm:72,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"💕",grp:"canto"},
+  {id:"S18",cn:"橄欖樹",rom:"Gan Lan Shu",en:"The Olive Tree",artist:"Chyi Yu",year:"1979",key:"A",scale:"minor",bpm:80,degs:[0,5,2,6],use7:false,rhythm:"gentle",instrument:"guitar",structure:"classic",emoji:"🍂",grp:"campus"},
+  {id:"S19",cn:"外婆的澎湖灣",rom:"Wai Po De Peng Hu Wan",en:"Grandma's Penghu Bay",artist:"Pan An-bang",year:"1979",key:"C",scale:"major",bpm:104,degs:[0,3,4,0],use7:false,rhythm:"steady",instrument:"guitar",structure:"classic",emoji:"🌙",grp:"campus"},
+  {id:"S20",cn:"鄉間小路",rom:"Xiang Jian Xiao Lu",en:"Country Road",artist:"Yeh Chia-hsiu",year:"1977",key:"C",scale:"major",bpm:100,degs:[0,3,4],use7:false,rhythm:"steady",instrument:"guitar",structure:"classic",emoji:"💃",grp:"campus"},
+  {id:"S21",cn:"童年",rom:"Tong Nian",en:"Childhood",artist:"Lo Ta-yu",year:"1981",key:"C",scale:"major",bpm:120,degs:[0,5,3,4],use7:false,rhythm:"upbeat",instrument:"guitar",structure:"classic",emoji:"🌙",grp:"folk"},
+  {id:"S22",cn:"龍的傳人",rom:"Long De Chuan Ren",en:"Descendants of the Dragon",artist:"Lee Chien-fu",year:"1980",key:"A",scale:"minor",bpm:88,degs:[0,6,5,4],use7:false,rhythm:"steady",instrument:"guitar",structure:"classic",emoji:"🔥",grp:"folk"},
+  {id:"S23",cn:"綠島小夜曲",rom:"Lü Dao Xiao Ye Qu",en:"Green Island Serenade",artist:"Zi Wei",year:"1954",key:"C",scale:"major",bpm:90,degs:[0,5,1,4],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"💕",grp:"classic"},
+  {id:"S24",cn:"高山青",rom:"Gao Shan Qing",en:"Green Mountains (Ali Shan)",artist:"Various",year:"1949",key:"G",scale:"major",bpm:120,degs:[0,4,0],use7:false,rhythm:"upbeat",instrument:"guitar",structure:"short",emoji:"💃",grp:"folk"},
+  {id:"S25",cn:"往事只能回味",rom:"Wang Shi Zhi Neng Hui Wei",en:"Memories Can Only Be Reminisced",artist:"You Ya",year:"1970",key:"C",scale:"major",bpm:96,degs:[0,5,3,4],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"💕",grp:"classic"},
+  {id:"S26",cn:"月光小夜曲",rom:"Yue Guang Xiao Ye Qu",en:"Moonlight Serenade",artist:"Tsai Chin",year:"1980",key:"C",scale:"major",bpm:84,degs:[0,5,1,4],use7:false,rhythm:"steady",instrument:"oldies",structure:"classic",emoji:"🌿",grp:"classic"},
+  {id:"S27",cn:"恰似你的溫柔",rom:"Qia Si Ni De Wen Rou",en:"Just Like Your Tenderness",artist:"Tsai Chin",year:"1980",key:"C",scale:"major",bpm:72,degs:[0,4,5,3],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"💕",grp:"classic"},
+  {id:"S28",cn:"被遺忘的時光",rom:"Bei Yi Wang De Shi Guang",en:"Forgotten Times",artist:"Tsai Chin",year:"1979",key:"C",scale:"major",bpm:68,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"🌙",grp:"classic"},
+  {id:"S29",cn:"一剪梅",rom:"Yi Jian Mei",en:"One Spray of Plum Blossom",artist:"Fei Yu-ching",year:"1983",key:"C",scale:"major",bpm:76,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"🍂",grp:"classic"},
+  {id:"S30",cn:"掌聲響起",rom:"Zhang Sheng Xiang Qi",en:"When the Applause Rises",artist:"Fong Fei-fei",year:"1986",key:"C",scale:"major",bpm:74,degs:[0,4,5,3],use7:false,rhythm:"gentle",instrument:"oldies",structure:"full",emoji:"🎵",grp:"classic"},
+  {id:"S31",cn:"茉莉花",rom:"Mo Li Hua",en:"Jasmine Flower",artist:"Traditional folk",year:"trad.",key:"G",scale:"major",bpm:84,degs:[0,3,4],use7:false,rhythm:"steady",instrument:"guitar",structure:"short",emoji:"🌿",grp:"folk"},
+  {id:"S32",cn:"但願人長久",rom:"Dan Yuan Ren Chang Jiu",en:"May We Live Long",artist:"Teresa Teng",year:"1983",key:"C",scale:"major",bpm:76,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"🌿",grp:"teng"},
+  {id:"S33",cn:"鄉戀",rom:"Xiang Lian",en:"Homeland Love",artist:"Li Guyi",year:"1979",key:"C",scale:"major",bpm:80,degs:[0,5,3,4],use7:false,rhythm:"gentle",instrument:"oldies",structure:"classic",emoji:"🍂",grp:"classic"},
+  {id:"S34",cn:"萍聚",rom:"Ping Ju",en:"Drifting Together",artist:"Various",year:"1987",key:"C",scale:"major",bpm:92,degs:[0,3,4,0],use7:false,rhythm:"steady",instrument:"guitar",structure:"classic",emoji:"🎵",grp:"campus"},
+  {id:"S35",cn:"小路",rom:"Xiao Lu",en:"Little Path",artist:"Russian folk",year:"1940",key:"D",scale:"minor",bpm:100,degs:[0,3,4,0],use7:false,rhythm:"steady",instrument:"guitar",structure:"short",emoji:"🍂",grp:"folk"},
+  {id:"S36",cn:"送別",rom:"Song Bie",en:"Farewell",artist:"Li Shutong",year:"1915",key:"C",scale:"major",bpm:66,degs:[0,3,0,4,0],use7:false,rhythm:"gentle",instrument:"guitar",structure:"short",emoji:"🍂",grp:"classic"},
+];
+const TPL_GROUPS = [
+  ['teng','邓丽君 Teresa Teng'], ['classic','经典金曲 Classics'], ['shidaiqu','时代曲 Shanghai'],
+  ['canto','粤语 Cantopop'], ['campus','校园民谣 Campus Folk'], ['folk','传统民谣 Folk'],
+];
 
 // ── Lyric templates (client-side helper) ──
 const LYRICS = {
@@ -1328,7 +1389,12 @@ function saveToBook(){
   toast('⭐ Kept in your song book! 已收藏');
 }
 function applyEntry(e){
-  S.mood = MOODS.find(m=>m.id===e.mood) || MOODS[0];
+  if(e.mood && e.mood.indexOf('tpl_')===0){
+    const t = SONG_TEMPLATES.find(x=>'tpl_'+x.id===e.mood);
+    S.mood = t ? { id:'tpl_'+t.id, emoji:t.emoji, en:t.en, cn:t.cn, key:t.key, scale:t.scale, degs:t.degs.slice(), bpm:t.bpm, use7:t.use7 } : MOODS[0];
+  } else {
+    S.mood = MOODS.find(m=>m.id===e.mood) || MOODS[0];
+  }
   S.rhythm = RHYTHMS.find(r=>r.id===e.rhythm) || RHYTHMS[0];
   S.instrument = INSTRUMENTS.find(i=>i.id===e.instrument) || INSTRUMENTS[0];
   S.structure = STRUCTURES.find(s=>s.id===e.structure) || STRUCTURES[1];
@@ -1452,6 +1518,7 @@ function restart(){
   ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=true);
   document.getElementById('words-area').value='';
   document.getElementById('title-area').value='';
+  const ts=document.getElementById('tpl-select'); if(ts) ts.value='';
   document.getElementById('tempo-btn').classList.remove('on');
   document.getElementById('tempo-btn').innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>';
   selectStructureCard(S.structure.id);
@@ -1531,6 +1598,41 @@ function renderStructures(){
 // SURPRISE ME (one-tap full song)
 // ═══════════════════════════════════════════════════════
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ── Start from a classic song (template dropdown) ──
+function renderTemplates(){
+  const sel = document.getElementById('tpl-select');
+  let html = '<option value="">— choose a familiar song · 选歌 —</option>';
+  TPL_GROUPS.forEach(([g,label])=>{
+    const items = SONG_TEMPLATES.filter(t=>t.grp===g);
+    if(!items.length) return;
+    html += `<optgroup label="${label}">`;
+    items.forEach(t=>{ html += `<option value="${t.id}">${t.emoji} ${t.cn} · ${t.en}</option>`; });
+    html += '</optgroup>';
+  });
+  sel.innerHTML = html;
+}
+function applyTemplate(id){
+  if(!id) return;
+  const t = SONG_TEMPLATES.find(x=>x.id===id);
+  if(!t) return;
+  Tone.start().catch(()=>{});
+  // Use the song's musical base only (key/tempo/chords/structure) — not its melody or lyrics.
+  S.mood = { id:'tpl_'+t.id, emoji:t.emoji, en:t.en, cn:t.cn, key:t.key, scale:t.scale, degs:t.degs.slice(), bpm:t.bpm, use7:t.use7 };
+  S.rhythm = RHYTHMS.find(r=>r.id===t.rhythm) || RHYTHMS[1];
+  S.instrument = INSTRUMENTS.find(i=>i.id===t.instrument) || INSTRUMENTS[2];
+  S.structure = STRUCTURES.find(s=>s.id===t.structure) || STRUCTURES[1];
+  S.progression = null; S.chorusLift = false; S.transpose = 0; S.tempoMul = 1; S.played = false;
+  S.title = t.cn + '（我的版本）';
+  document.getElementById('words-area').value = '';
+  document.getElementById('title-area').value = S.title;
+  ['next-1','next-2','next-3'].forEach(x=>document.getElementById(x).disabled=false);
+  document.getElementById('tempo-btn').classList.remove('on');
+  document.getElementById('tempo-btn').innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>';
+  highlightSelections();
+  toast(`🎼 Based on “${t.cn}” · now add your own words! 加你的词`);
+  goToStep(LAST_STEP);
+}
 async function surpriseMe(){
   try{ await Tone.start(); }catch(e){}
   S.mood = pick(MOODS); S.rhythm = pick(RHYTHMS); S.instrument = pick(INSTRUMENTS); S.structure = pick(STRUCTURES);
@@ -1632,7 +1734,7 @@ function printLyricSheet(){
 // INIT
 // ═══════════════════════════════════════════════════════
 karaokeTarget = document.getElementById('karaoke-text');
-renderMoods(); renderRhythms(); renderInstruments(); renderStructures();
+renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates();
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Number keys trigger jam pads (only while the jam pad is open)
