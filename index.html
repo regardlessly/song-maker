@@ -109,6 +109,8 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 .kw.hi{color:#c05c1a;opacity:1;font-weight:800}
 
 #play-status{text-align:center;font-size:15px;color:#7a5a3a;padding:2px 0 4px;flex-shrink:0;font-weight:600;min-height:20px}
+#song-info{text-align:center;font-size:13px;color:#9a7a55;font-weight:700;padding:0 0 4px;flex-shrink:0;font-family:ui-monospace,monospace;word-break:break-word}
+#mel-select{flex:1;padding:11px;font-size:15px;font-weight:800;border:2.5px solid #c8a06a;border-radius:12px;background:#fffaf4;color:#2a1600;min-height:50px}
 
 .ctrl-row{display:flex;gap:8px;flex-shrink:0;margin-top:7px}
 .ctrl-row button{flex:1;padding:11px 4px;font-size:14px;font-weight:800;border-radius:12px;
@@ -324,8 +326,12 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>
     </div></div>
     <div id="play-status"></div>
+    <div id="song-info"></div>
     <div class="ctrl-row">
       <button class="go" onclick="openChords()">🎹 Change the chords · 换和弦走向</button>
+    </div>
+    <div class="ctrl-row">
+      <select id="mel-select" onchange="setMelody(this.value)"></select>
     </div>
     <div class="ctrl-row">
       <button id="tempo-btn" onclick="toggleTempo()">🐢 Slower<br><span style="font-size:11px">慢一点</span></button>
@@ -523,6 +529,27 @@ const TPL_GROUPS = [
   ['canto','粤语 Cantopop'], ['campus','校园民谣 Campus Folk'], ['folk','传统民谣 Folk'],
 ];
 
+// ── Public-domain melodies, encoded as [semitones-above-tonic, duration-in-16ths] ──
+// (4 = quarter note, 2 = eighth, 8 = half, 6 = dotted quarter). offset null = rest.
+// These are out-of-copyright tunes everyone knows; they play as the topline and
+// transpose with the song's key. 'auto' = the chord-tone melody (no fixed tune).
+const MELODIES = [
+  { id:'auto', en:'Auto (from chords)', cn:'自动旋律', notes:null },
+  { id:'joy', en:'Ode to Joy', cn:'欢乐颂', notes:[
+    [4,4],[4,4],[5,4],[7,4],[7,4],[5,4],[4,4],[2,4],[0,4],[0,4],[2,4],[4,4],[4,6],[2,2],[2,8],
+    [4,4],[4,4],[5,4],[7,4],[7,4],[5,4],[4,4],[2,4],[0,4],[0,4],[2,4],[4,4],[2,6],[0,2],[0,8] ] },
+  { id:'tiger', en:'Two Tigers', cn:'两只老虎', notes:[
+    [0,4],[2,4],[4,4],[0,4],[0,4],[2,4],[4,4],[0,4],[4,4],[5,4],[7,8],[4,4],[5,4],[7,8],
+    [7,2],[9,2],[7,2],[5,2],[4,4],[0,4],[7,2],[9,2],[7,2],[5,2],[4,4],[0,4],[0,4],[-5,4],[0,8],[0,4],[-5,4],[0,8] ] },
+  { id:'star', en:'Twinkle Star', cn:'小星星', notes:[
+    [0,4],[0,4],[7,4],[7,4],[9,4],[9,4],[7,8],[5,4],[5,4],[4,4],[4,4],[2,4],[2,4],[0,8],
+    [7,4],[7,4],[5,4],[5,4],[4,4],[4,4],[2,8],[7,4],[7,4],[5,4],[5,4],[4,4],[4,4],[2,8],
+    [0,4],[0,4],[7,4],[7,4],[9,4],[9,4],[7,8],[5,4],[5,4],[4,4],[4,4],[2,4],[2,4],[0,8] ] },
+  { id:'birthday', en:'Happy Birthday', cn:'生日快乐', notes:[
+    [7,2],[7,2],[9,4],[7,4],[12,4],[11,8],[7,2],[7,2],[9,4],[7,4],[14,4],[12,8],
+    [7,2],[7,2],[19,4],[16,4],[12,4],[11,4],[9,8],[17,2],[17,2],[16,4],[12,4],[14,4],[12,8] ] },
+];
+
 // ── Lyric templates (client-side helper) ──
 const LYRICS = {
   happy:    { topic:'this happy day',
@@ -552,6 +579,7 @@ const S = {
   step:1, mood:null, rhythm:null, instrument:null, structure:STRUCTURES[1],
   title:'', words:'', transpose:0, tempoMul:1, playing:false, played:false,
   progression:null, chorusLift:false,   // null progression = use the mood's own chords
+  melody:null,                          // null = auto chord-tone melody; else a MELODIES entry
 };
 let ttsOn = false;
 
@@ -599,6 +627,22 @@ function buildPlan(){
     for(let i=0;i<n;i++) barPlan.push(sec);
   }
   totalBars = barPlan.length;
+  buildMelodyGrid(totalBars * 16);
+}
+
+// Pre-compute which 16th-steps a chosen melody attacks on (looped across the song).
+let melodyGrid = [], curBpm = 100;
+function buildMelodyGrid(totalSteps){
+  melodyGrid = new Array(totalSteps).fill(null);
+  if(!S.melody || !S.melody.notes) return;
+  const tonic = nMidi(S.mood.key, 5);     // melody sits an octave above the chords
+  const notes = S.melody.notes;
+  let g = 0, idx = 0, guard = 0;
+  while(g < totalSteps && guard < 100000){
+    const [off, dur] = notes[idx % notes.length];
+    if(off !== null && g < totalSteps) melodyGrid[g] = { note: toNoteT(tonic + off), steps: dur };
+    g += dur; idx++; guard++;
+  }
 }
 function stepActions(g){
   const bar = Math.floor(g / 16), ds = g % 16;
@@ -623,7 +667,12 @@ function stepActions(g){
     a.chord = buildChord(S.mood.key, S.mood.scale, deg, 4, use7);
     if(arr.bass) a.bass = rootOfChord(S.mood.key, S.mood.scale, deg, 2);
   }
-  if(arr.melody && ds % 4 === 0) a.melody = melodyNote(S.mood.key, S.mood.scale, deg, ds / 4);
+  if(S.melody && S.melody.notes){
+    const mn = melodyGrid[g];                       // a chosen, recognizable tune
+    if(mn){ a.melody = mn.note; a.melodyDur = mn.steps * (60/curBpm)/4; }
+  } else if(arr.melody && ds % 4 === 0){
+    a.melody = melodyNote(S.mood.key, S.mood.scale, deg, ds / 4);  // auto chord-tone line
+  }
   return a;
 }
 
@@ -700,7 +749,7 @@ function fireStep(a, time){
   if(a.clap)  snareS.triggerAttackRelease('16n',time);
   if(a.chord){ try{ chordSyn.releaseAll(time); chordSyn.triggerAttackRelease(a.chord,'2n',time+.01,a.chordVel); }catch(e){} }
   if(a.bass)   try{ bassSyn.triggerAttackRelease(a.bass,'4n',time+.01); }catch(e){}
-  if(a.melody) try{ melSyn.triggerAttackRelease(a.melody,'4n',time+.01); }catch(e){}
+  if(a.melody) try{ melSyn.triggerAttackRelease(a.melody, a.melodyDur||'4n', time+.01); }catch(e){}
 }
 
 // First [start,end) bar range of a section type in the current plan (null if absent)
@@ -747,6 +796,7 @@ async function practiceChorus(){
   if(!r){ toast('Nothing to practice yet 没有可练习的部分'); return; }
   makeChordSyn(S.instrument); makeBassSyn(); makeMelSyn();
   const bpm = Math.round(S.mood.bpm * S.tempoMul);
+  curBpm = bpm;
   Tone.Transport.bpm.value = bpm;
   const startStep = r.start * 16, endStep = r.end * 16;
   gstep = startStep;
@@ -771,6 +821,7 @@ async function playSong(){
   makeChordSyn(S.instrument); makeBassSyn(); makeMelSyn();
 
   const bpm = Math.round(S.mood.bpm * S.tempoMul);
+  curBpm = bpm;
   Tone.Transport.bpm.value = bpm;
   gstep = 0;
   const totalSteps = totalBars * 16;
@@ -842,11 +893,13 @@ function toggleTempo(){
   const b = document.getElementById('tempo-btn');
   if(S.tempoMul === 1){ b.classList.remove('on'); b.innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>'; }
   else { b.classList.add('on'); b.innerHTML='🐇 Normal<br><span style="font-size:11px">正常</span>'; }
+  updateSongInfo();
   if(S.playing) replaySong();
 }
 function changeKey(d){
   S.transpose = Math.max(-7, Math.min(7, S.transpose + d));
   toast(`Key: ${S.transpose>0?'+':''}${S.transpose}  音高`);
+  updateSongInfo();
   if(S.playing) replaySong();
 }
 
@@ -1233,14 +1286,14 @@ function progChords(p){
 function setProgressionById(id){
   const p = PROGRESSIONS.find(x => x.id === id);
   S.progression = (p && p.degs) ? p : null;     // 'orig'/null → use the mood's own chords
-  persistDraft();
+  persistDraft(); updateSongInfo();
   if(S.playing) replaySong();
 }
 function toggleChorusLift(){
   S.chorusLift = !S.chorusLift;
   const b = document.getElementById('lift-toggle');
   if(b){ b.classList.toggle('on', S.chorusLift); b.textContent = S.chorusLift ? 'On 开' : 'Off 关'; }
-  persistDraft();
+  persistDraft(); updateSongInfo();
   if(S.playing) replaySong();
   toast(S.chorusLift ? '⬆ Chorus will lift 副歌升级' : 'Chorus lift off 已关闭');
 }
@@ -1279,6 +1332,28 @@ function openChords(){
 }
 function closeChords(){ stopPreview(); document.getElementById('chords').hidden = true; }
 
+// ── Melody picker + the "what's in your song" readout ──
+function renderMelodies(){
+  document.getElementById('mel-select').innerHTML =
+    MELODIES.map(m=>`<option value="${m.id}">🎶 ${m.cn} · ${m.en}</option>`).join('');
+}
+function setMelody(id){
+  const m = MELODIES.find(x=>x.id===id);
+  S.melody = (m && m.notes) ? m : null;
+  persistDraft(); updateSongInfo();
+  if(S.playing) replaySong();
+  toast(S.melody ? `🎶 Melody: ${S.melody.cn} · ${S.melody.en}` : '🎶 Auto melody 自动旋律');
+}
+function songInfoText(){
+  if(!S.mood) return '';
+  const degs = S.progression ? S.progression.degs : S.mood.degs;
+  const chords = degs.map(d=>chordName(d)).join('-');
+  const lift = S.chorusLift ? ' (chorus lifts)' : '';
+  const mel = S.melody ? S.melody.cn : '自动';
+  return `${S.mood.key}${S.mood.scale==='minor'?'m':''} · ${Math.round(S.mood.bpm*S.tempoMul)}bpm · ${chords}${lift} · 🎶${mel}`;
+}
+function updateSongInfo(){ const el = document.getElementById('song-info'); if(el) el.textContent = songInfoText(); }
+
 // ═══════════════════════════════════════════════════════
 // SAVE — WAV (offline render) + lyric sheet
 // ═══════════════════════════════════════════════════════
@@ -1292,6 +1367,7 @@ async function saveWav(){
     await Tone.start();
     buildPlan();
     const inst = S.instrument, bpm = Math.round(S.mood.bpm * S.tempoMul);
+    curBpm = bpm;
     const sixteenth = (60/bpm)/4;
     const totalSteps = totalBars * 16;
     const dur = totalSteps * sixteenth + 4;
@@ -1312,7 +1388,7 @@ async function saveWav(){
         if(a.clap)  snare.triggerAttackRelease('16n',t);
         if(a.chord) chord.triggerAttackRelease(a.chord,'2n',t+.01,a.chordVel);
         if(a.bass)  bass.triggerAttackRelease(a.bass,'4n',t+.01);
-        if(a.melody)mel.triggerAttackRelease(a.melody,'4n',t+.01);
+        if(a.melody)mel.triggerAttackRelease(a.melody, a.melodyDur||'4n', t+.01);
       }
     }, dur);
     const ab = buffer.get ? buffer.get() : buffer;
@@ -1384,6 +1460,7 @@ function saveToBook(){
     mood:S.mood.id, rhythm:S.rhythm?.id, instrument:S.instrument?.id,
     structure:S.structure.id, words:S.words, transpose:S.transpose, tempoMul:S.tempoMul,
     progression:S.progression?S.progression.id:null, chorusLift:S.chorusLift?1:0,
+    melody:S.melody?S.melody.id:null,
   });
   persistBook(arr.slice(0,50));
   toast('⭐ Kept in your song book! 已收藏');
@@ -1403,6 +1480,9 @@ function applyEntry(e){
   const ep = e.progression ? PROGRESSIONS.find(x=>x.id===e.progression) : null;
   S.progression = (ep && ep.degs) ? ep : null;
   S.chorusLift = !!e.chorusLift;
+  const em = e.melody ? MELODIES.find(x=>x.id===e.melody) : null;
+  S.melody = (em && em.notes) ? em : null;
+  const ms = document.getElementById('mel-select'); if(ms) ms.value = S.melody ? S.melody.id : 'auto';
   document.getElementById('words-area').value = S.words;
   document.getElementById('title-area').value = S.title;
   // reflect selections so Back navigation makes sense
@@ -1501,6 +1581,8 @@ function goToStep(n){
     document.getElementById('play-btn-big').classList.remove('playing');
     S.playing = false; S.played = false;
     stopSong();
+    document.getElementById('mel-select').value = S.melody ? S.melody.id : 'auto';
+    updateSongInfo();
     persistDraft();
   }
   speakStepTitle();
@@ -1513,7 +1595,8 @@ function restart(){
   stopSong(); stopPreview();
   S.mood=null; S.rhythm=null; S.instrument=null; S.structure=STRUCTURES[1];
   S.title=''; S.words=''; S.transpose=0; S.tempoMul=1; S.played=false;
-  S.progression=null; S.chorusLift=false;
+  S.progression=null; S.chorusLift=false; S.melody=null;
+  { const ms=document.getElementById('mel-select'); if(ms) ms.value='auto'; }
   document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('selected'));
   ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=true);
   document.getElementById('words-area').value='';
@@ -1622,7 +1705,7 @@ function applyTemplate(id){
   S.rhythm = RHYTHMS.find(r=>r.id===t.rhythm) || RHYTHMS[1];
   S.instrument = INSTRUMENTS.find(i=>i.id===t.instrument) || INSTRUMENTS[2];
   S.structure = STRUCTURES.find(s=>s.id===t.structure) || STRUCTURES[1];
-  S.progression = null; S.chorusLift = false; S.transpose = 0; S.tempoMul = 1; S.played = false;
+  S.progression = null; S.chorusLift = false; S.transpose = 0; S.tempoMul = 1; S.played = false; S.melody = null;
   S.title = t.cn + '（我的版本）';
   document.getElementById('words-area').value = '';
   document.getElementById('title-area').value = S.title;
@@ -1658,7 +1741,7 @@ function slug(s){ return String(s||'song').toLowerCase().replace(/[^a-z0-9]+/g,'
 function encodeState(){
   const o = { t:S.title, m:S.mood&&S.mood.id, r:S.rhythm&&S.rhythm.id, i:S.instrument&&S.instrument.id,
               s:S.structure.id, w:S.words, tr:S.transpose, tm:S.tempoMul,
-              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0 };
+              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0, ml:S.melody?S.melody.id:null };
   try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }catch(e){ return ''; }
 }
 function decodeState(str){
@@ -1666,7 +1749,7 @@ function decodeState(str){
 }
 function stateToEntry(st){
   return { title:st.t, mood:st.m, rhythm:st.r, instrument:st.i, structure:st.s, words:st.w,
-           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl };
+           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl, melody:st.ml };
 }
 function shareLink(){
   if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
@@ -1734,7 +1817,7 @@ function printLyricSheet(){
 // INIT
 // ═══════════════════════════════════════════════════════
 karaokeTarget = document.getElementById('karaoke-text');
-renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates();
+renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies();
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Number keys trigger jam pads (only while the jam pad is open)

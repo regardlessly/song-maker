@@ -371,6 +371,56 @@ test('enterStage (async, with audible count-in) does not throw', async (app) => 
   ok($('#stage').hidden, 'stage closed');
 });
 
+// ═══ MELODY ENGINE — public-domain tunes (round 7) ═══
+
+test('melody dropdown is populated', (app) => {
+  const { $$ } = app;
+  ok($$('#mel-select option').length === 5, 'auto + 4 PD melodies');
+  ok($$('#mel-select option').some(o=>o.textContent.includes('两只老虎')), 'includes Two Tigers');
+});
+
+test('choosing a melody plays the encoded tune as the topline', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);                 // Happy = C major, tonic C
+  W.setMelody('tiger');                     // Two Tigers, first note = tonic (offset 0)
+  W.buildPlan();
+  eq(W.stepActions(0).melody, 'C5', 'first melody note = C5 (tonic at octave 5)');
+  ok(W.stepActions(0).melodyDur > 0, 'melody note has a real duration');
+  eq(W.stepActions(1).melody, null, 'mid-note steps are silent (note sustains)');
+  eq(W.stepActions(4).melody, 'D5', 'second note = D5 (re)');
+});
+
+test('melody transposes with the key', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.setMelody('star'); W.changeKey(2);      // +2 semitones
+  W.buildPlan();
+  eq(W.stepActions(0).melody, 'D5', 'Twinkle first note follows +2 transpose');
+});
+
+test('auto melody still works when none chosen', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.setMelody('auto');
+  W.buildPlan();
+  ok(W.stepActions(12*16).melody, 'chorus still gets the auto chord-tone melody');
+});
+
+test('melody survives a share-link round-trip', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.setMelody('joy');
+  eq(W.decodeState(W.encodeState()).ml, 'joy', 'melody id encoded');
+});
+
+test('song-info readout shows key, tempo and chords', async (app) => {
+  const { $, window: W, tick } = app;
+  W.applyTemplate('S01'); await tick();      // Moon: C major, 72bpm, C-G-Am-Em-F-C-F-G
+  const info = $('#song-info').textContent;
+  ok(info.includes('72bpm'), 'shows tempo');
+  ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
+});
+
 // ═══ CLASSIC-SONG TEMPLATE DROPDOWN (round 6) ═══
 
 test('template dropdown is populated with grouped songs', (app) => {
