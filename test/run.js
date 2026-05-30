@@ -375,10 +375,11 @@ test('enterStage (async, with audible count-in) does not throw', async (app) => 
 
 test('melody dropdown is populated', (app) => {
   const { $$ } = app;
-  ok($$('#mel-select option').length === 7, 'auto + 6 PD melodies');
+  ok($$('#mel-select option').length === 12, 'auto + PD tunes + originals');
   ok($$('#mel-select option').some(o=>o.textContent.includes('两只老虎')), 'includes Two Tigers');
   ok($$('#mel-select option').some(o=>o.textContent.includes('茉莉花')), 'includes Jasmine Flower');
-  ok($$('#mel-select option').some(o=>o.textContent.includes('送别')), 'includes Farewell');
+  ok($$('#mel-select option').some(o=>o.textContent.includes('友谊地久天长')), 'includes Auld Lang Syne');
+  ok($$('#mel-select option').some(o=>o.textContent.includes('原创')), 'includes an original era-style topline');
 });
 
 test('Jasmine Flower melody plays its opening note', async (app) => {
