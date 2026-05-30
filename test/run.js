@@ -430,6 +430,41 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ PERFORM LIVE — play-along band (round 12) ═══
+
+test('perform overlay + 3 role pads exist', (app) => {
+  const { $, $$ } = app;
+  ok($('#perf'), 'perform overlay');
+  eq($$('#perf-roles button').length, 3, 'drums / chords / melody roles');
+  ok($('#perf-tap'), 'big tap pad');
+});
+
+test('the band auto-plays every layer EXCEPT the human role', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();   // Happy
+  $('#rhythm-grid').children[1].onclick({}); await tick();  // Steady (kick on downbeat)
+  W.buildPlan();
+  W.setRole('drums');
+  ok(!W.perfBandActions(12*16).kick, 'drummer role: band omits drums (you play them)');
+  ok(W.perfBandActions(12*16).chord, 'band still plays the chords');
+  W.setRole('chords');
+  ok(!W.perfBandActions(12*16).chord, 'chord role: band omits chords');
+  ok(W.perfBandActions(12*16).kick || W.perfBandActions(12*16).hihat, 'band still plays drums');
+  W.setRole('melody');
+  ok(!W.perfBandActions(12*16).melody, 'melody role: band omits the melody (you play it)');
+});
+
+test('openPerform / stopPerform open and close cleanly', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  await W.openPerform();
+  ok(!$('#perf').hidden, 'perform overlay open');
+  W.setRole('chords');
+  try { W.perfTap(); ok(true, 'tap played a chord'); } catch(e){ ok(false, 'perfTap threw: '+e.message); }
+  W.stopPerform();
+  ok($('#perf').hidden, 'perform overlay closed');
+});
+
 // ═══ TIER B/C BATCH 3 — hum robustness + guided coach (round 11) ═══
 
 test('hum has a no-penalty Try-again button', (app) => {

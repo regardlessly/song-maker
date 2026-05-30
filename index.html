@@ -135,6 +135,24 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 #stage-size button{width:54px;height:54px;border-radius:14px;border:2px solid #ffffff55;background:#ffffff18;
   color:#fff;font-size:20px;font-weight:800;cursor:pointer}
 
+/* ── Perform Live ── */
+#perf{position:fixed;inset:0;z-index:5600;background:radial-gradient(circle at 50% 30%,#10324a,#06121c);
+  color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+#perf[hidden]{display:none}
+#perf-exit{position:absolute;top:16px;right:16px;width:56px;height:56px;border-radius:50%;border:2px solid #ffffff55;
+  background:#ffffff18;color:#fff;font-size:22px;cursor:pointer;z-index:2}
+#perf-next{position:absolute;top:20px;left:0;right:0;font-size:18px;font-weight:800;color:#bfe3ff}
+#perf-cue{font-size:22px;font-weight:900;color:#ffcf8a;letter-spacing:.05em;opacity:.5;transition:opacity .1s,transform .1s;margin-bottom:14px}
+#perf-cue.beat{opacity:1;transform:scale(1.18)}
+#perf-tap{width:min(60vw,300px);height:min(60vw,300px);border-radius:50%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:46px;font-weight:900;color:#06121c;cursor:pointer;
+  background:radial-gradient(circle at 50% 40%,#ffe0a8,#ffb04d);box-shadow:0 0 40px #ffb04d70;user-select:none;-webkit-user-select:none;transition:transform .08s}
+#perf-tap.hit{transform:scale(.93);box-shadow:0 0 70px #ffd98a}
+#perf-roles{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+#perf-roles button{padding:12px 16px;border-radius:13px;border:2.5px solid #ffffff44;background:#ffffff14;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+#perf-roles button.active{background:#ffcf8a;border-color:#ffcf8a;color:#10324a}
+#perf-hint{margin-top:14px;font-size:15px;color:#bfe3ffcc;font-weight:700}
+
 /* ── Live Jam (3×3 DJ pad) ── */
 #jam{position:fixed;inset:0;z-index:5500;background:radial-gradient(circle at 50% 22%,#241608,#110902);
   color:#fff;display:flex;flex-direction:column;align-items:center;padding:16px}
@@ -398,6 +416,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <button onclick="practiceSection('bridge')">Bridge 桥段</button>
     </div>
     <div class="ctrl-row">
+      <button class="go" onclick="openPerform()">🎭 Perform LIVE (play along) · 现场表演</button>
+    </div>
+    <div class="ctrl-row">
       <button class="go" onclick="enterStage()">🎤 Stage 上台</button>
       <button id="save-btn" onclick="saveWav()">💾 Save 保存</button>
       <button onclick="shareLink()">🔗 Share 分享</button>
@@ -423,6 +444,20 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   <div id="stage-count"></div>
   <div id="stage-lyrics"></div>
   <div id="stage-hint">Tap anywhere to stop · 点击停止</div>
+</div>
+
+<!-- Perform Live overlay -->
+<div id="perf" hidden>
+  <button id="perf-exit" onclick="stopPerform()">✕</button>
+  <div id="perf-next"></div>
+  <div id="perf-cue">YOUR TURN · 到你了</div>
+  <div id="perf-tap" onclick="perfTap()">TAP<br><span style="font-size:18px">轻拍</span></div>
+  <div id="perf-roles">
+    <button data-role="drums" onclick="setRole('drums')">🥁 Drums 鼓</button>
+    <button data-role="chords" onclick="setRole('chords')">🎹 Chords 和弦</button>
+    <button data-role="melody" onclick="setRole('melody')">🎤 Tune 旋律</button>
+  </div>
+  <div id="perf-hint">The band plays with you · 乐队和你一起</div>
 </div>
 
 <!-- Live Jam overlay -->
@@ -691,6 +726,10 @@ const S = {
   melody:null,                          // null = auto chord-tone melody; else a MELODIES entry
 };
 let ttsOn = false;
+
+// Set this to your deployed Worker URL (see server/README.md) to enable the AI lyric co-writer.
+// Empty = use the built-in offline template generator. An API key must NEVER go in this file.
+const LYRIC_API_URL = '';
 
 // ═══════════════════════════════════════════════════════
 // MUSIC THEORY  (transpose applied centrally)
@@ -1084,7 +1123,28 @@ async function findMyKey(){
 // ═══════════════════════════════════════════════════════
 // LYRICS HELPER (client-side)
 // ═══════════════════════════════════════════════════════
-function helpWrite(){
+async function helpWrite(){
+  if(LYRIC_API_URL){
+    const ta = document.getElementById('words-area');
+    const m = S.mood || MOODS[0];
+    const theme = ta.value.trim();
+    toast('✨ Writing your lyrics… 写歌词中…');
+    try{
+      const ctrl = new AbortController();
+      const to = setTimeout(()=>ctrl.abort(), 15000);
+      const r = await fetch(LYRIC_API_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ mood:m.id, theme, structure:S.structure.id, lang:'both' }), signal:ctrl.signal });
+      clearTimeout(to);
+      const d = await r.json();
+      if(d && d.lyrics && d.lyrics.trim()){ ta.value = d.lyrics.trim(); toast('✨ Lyrics ready — edit anything! 可以修改'); return; }
+    }catch(e){ /* fall through to offline template */ }
+    templateLyrics();
+    toast('✨ (offline) Lyrics ready 可以修改');
+    return;
+  }
+  templateLyrics();
+}
+function templateLyrics(){
   const m = S.mood || MOODS[0];
   const bank = LYRICS[m.id] || LYRICS.happy;
   const typed = document.getElementById('words-area').value.trim();
@@ -1392,6 +1452,81 @@ function openJam(){
   requestWake();
 }
 function closeJam(){ jamStop(); releaseWake(); document.getElementById('jam').hidden = true; }
+
+// ═══════════════════════════════════════════════════════
+// PERFORM LIVE — the band plays WITH you; you play one part (P1/P2/P3/P5/P7)
+// ═══════════════════════════════════════════════════════
+let perfRole = 'drums', perfOn = false, perfMelIdx = 0, perfTapCount = 0;
+
+// Band auto-plays every layer EXCEPT the human's chosen part (so their part feels essential).
+function perfBandActions(g){
+  const a = stepActions(g);
+  if(perfRole === 'drums'){ a.kick=a.snare=a.hihat=a.clap=false; }
+  else if(perfRole === 'chords'){ a.chord=null; }
+  else if(perfRole === 'melody'){ a.melody=null; a.melodyHi=null; }
+  return a;
+}
+function setRole(role){
+  perfRole = role; perfMelIdx = 0;
+  document.querySelectorAll('#perf-roles button').forEach(b=>b.classList.toggle('active', b.dataset.role===role));
+  const lab = { drums:'🥁 You are the drummer 你打鼓', chords:'🎹 You play the chords 你弹和弦', melody:'🎤 You play the tune 你奏旋律' }[role];
+  const h = document.getElementById('perf-hint'); if(h) h.textContent = lab + ' · the band plays the rest 乐队伴奏';
+}
+function perfPulse(g){
+  if(!totalBars) return;
+  const bar = Math.floor(g/16) % totalBars;
+  const sec = SEC_LABEL[barPlan[bar]] || {en:'',cn:''};
+  const nb = barPlan[(Math.floor(g/16)+1) % totalBars] || 'verse';
+  const nsec = SEC_LABEL[nb] || {en:'',cn:''};
+  const el = document.getElementById('perf-next'); if(el) el.textContent = `▶ ${sec.en} · ${sec.cn}    →    next: ${nsec.en}`;
+  const cue = document.getElementById('perf-cue'); if(cue){ cue.classList.add('beat'); setTimeout(()=>cue.classList.remove('beat'), 160); }
+}
+async function openPerform(){
+  if(!S.mood || !S.rhythm){ toast('Make a song first 先做一首歌'); return; }
+  try{ await Tone.start(); }catch(e){}
+  stopSong(); stopPreview(); buildPlan(); ensureSynths();
+  const bpm = Math.round(S.mood.bpm * S.tempoMul); curBpm = bpm; Tone.Transport.bpm.value = bpm;
+  document.getElementById('perf').hidden = false;
+  requestWake();
+  setRole(perfRole);
+  perfOn = true; gstep = 0; perfMelIdx = 0;
+  const totalSteps = totalBars * 16;
+  Tone.Transport.scheduleRepeat(time => {
+    const g = gstep % totalSteps;
+    fireStep(perfBandActions(g), time);
+    if(g % 4 === 0){ try{ Tone.Draw.schedule(()=>perfPulse(g), time); }catch(e){ perfPulse(g); } }
+    gstep++;
+  }, '16n');
+  Tone.Transport.start('+0.1');
+}
+function stopPerform(){
+  perfOn = false;
+  Tone.Transport.stop(); Tone.Transport.cancel();
+  try{ chordSyn?.releaseAll(); }catch(e){}
+  releaseWake();
+  document.getElementById('perf').hidden = true;
+}
+// Each tap plays the human's part — always in key; the band keeps the time.
+function perfTap(){
+  if(!perfOn) return;
+  ensureSynths();
+  const bar = Math.floor(gstep/16) % Math.max(1,totalBars);
+  const degs = S.progression ? S.progression.degs : S.mood.degs;
+  const deg = degs[bar % degs.length];
+  if(perfRole === 'drums'){
+    perfTapCount++; padDrum(perfTapCount % 2 ? 'kick' : 'snare');
+  } else if(perfRole === 'chords'){
+    const notes = buildChord(S.mood.key, S.mood.scale, deg, 4, !!S.mood.use7);
+    try{ chordSyn.triggerAttackRelease(notes, '2n', undefined, 0.95); }catch(e){}
+  } else { // melody
+    const mnotes = (S.melody && S.melody.notes) ? S.melody.notes.filter(n=>n[0]!==null) : null;
+    let note;
+    if(mnotes && mnotes.length){ note = toNoteT(nMidi(S.mood.key,5) + mnotes[perfMelIdx % mnotes.length][0]); perfMelIdx++; }
+    else note = melodyNote(S.mood.key, S.mood.scale, deg, perfMelIdx++ % 4);
+    try{ melSyn.triggerAttackRelease(note, '4n'); }catch(e){}
+  }
+  const tap = document.getElementById('perf-tap'); if(tap){ tap.classList.add('hit'); setTimeout(()=>tap.classList.remove('hit'), 120); }
+}
 
 // ═══════════════════════════════════════════════════════
 // CHANGE THE CHORDS — pick the progression for the real song
@@ -2183,7 +2318,14 @@ karaokeTarget = document.getElementById('karaoke-text');
 renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies(); renderPrompts();
 try{ const z=parseFloat(localStorage.getItem('sk.zoom')); if(z && ZOOMS.includes(z)){ zoomLevel=z; applyZoom(); } }catch(e){}
 try{ if(!localStorage.getItem('sk.coached') && !location.hash) openCoach(); }catch(e){}
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('coach').hidden) closeCoach(); else if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('fit').hidden) closeFit(); else if(!document.getElementById('book').hidden) closeBook(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('coach').hidden) closeCoach(); else if(!document.getElementById('perf').hidden) stopPerform(); else if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('fit').hidden) closeFit(); else if(!document.getElementById('book').hidden) closeBook(); } });
+
+// Perform mode: space / enter / any number = tap your part
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('perf').hidden) return;
+  if(e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key===' ' || e.key==='Enter' || /^[0-9]$/.test(e.key)){ e.preventDefault(); perfTap(); }
+});
 
 // Number keys trigger jam pads (only while the jam pad is open)
 document.addEventListener('keydown', e=>{
