@@ -152,3 +152,29 @@ names**, so music theory is unit-testable. Then shipped a feature batch, each co
 94. Covers theory, arranger, exports, book, stage, share round-trip, shared-URL load, resume, practice, stageSize.
 95. Re-verified: no duplicate IDs, every `onclick` resolves, JS parses (938 lines).
 96. Found-and-fixed: async `enterStage` race in a stage test (await), `$$` scope in a test, `S.rhythm` guard.
+
+---
+
+# Round 4-6 — DJ pad, changeable chords, classic-song templates, public deploy
+
+## U. Live Jam DJ pad
+97. 3×3 launchpad overlay (🎛) with switchable **banks**: Chords / Parts / Feel / Drums.
+98. **Chords bank** maps each pad to a chord (real letter for the key); Parts launches sections (next-bar quantized); Feel swaps progression; Drums = finger-drum + pattern select.
+99. Pads mapped to **number keys** in grid layout (7-8-9 / 4-5-6 / 1-2-3); badges show the key.
+100. **"Each pad also changes the chords"** option: overlays a progression onto every pad (badge per pad).
+
+## V. Changeable chords for the REAL song (Option A)
+101. `S.progression` + central `stepActions` read it → studio playback **and** WAV use it.
+102. **"Change the chords"** sheet: 9 progressions with live chord letters + ▶ preview.
+103. **Chorus lift** — chorus uses IV–V–vi–I so sections actually move. Persists in share/book/draft.
+
+## W. Classic-song template dropdown (from the supplied library)
+104. Imported 36-song Teresa-Teng-era library → `SONG_TEMPLATES` (key/bpm/degs/structure/instrument).
+105. Chord degrees computed from each song's **actual chords-in-key** (secondary dominants approximated to nearest diatonic degree).
+106. **Legal stance:** uses only the musical *base* (key/tempo/progression/structure) — never the copyrighted melody or lyrics. Picking a song seeds a familiar feel to write your own words over.
+107. Grouped dropdown on step 1 (邓丽君 / Classics / 时代曲 / Cantopop / Campus Folk / Folk); auto-fills mood-base + rhythm + instrument + structure and jumps to the studio.
+108. Template choice round-trips through share links + Song Book (`tpl_` mood reconstruction).
+
+## X. Deploy + quality gate
+109. Deployed to **GitHub Pages** (gh-pages branch) → https://regardlessly.github.io/song-maker/ (durable, off-laptop).
+110. Suite grown to **148 assertions / 59 cases — all green**; JS parses (1344 lines); handlers + IDs verified.
