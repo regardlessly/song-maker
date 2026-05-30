@@ -1,0 +1,12 @@
+{
+  "name": "songkaki",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SongKaki — a step-by-step song maker for seniors",
+  "scripts": {
+    "test": "node test/run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

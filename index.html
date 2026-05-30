@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Song Maker 🎵</title>
+<title>SongKaki 🎵</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -12,9 +12,14 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 /* ── Shell ── */
 #app{height:100dvh;display:flex;flex-direction:column;overflow:hidden;max-width:1100px;margin:0 auto}
 
+/* ── Top bar ── */
+#topbar{position:fixed;top:8px;right:10px;z-index:120;display:flex;gap:8px}
+#topbar button{width:46px;height:46px;border-radius:50%;border:2.5px solid #c8a06a;background:#fffaf4;font-size:20px;cursor:pointer}
+#topbar button.on{border-color:#c05c1a;background:#fff3e4}
+
 /* ── Progress dots ── */
-#dots{display:flex;justify-content:center;align-items:center;gap:12px;padding:10px 0;flex-shrink:0}
-.dot{width:15px;height:15px;border-radius:50%;border:2.5px solid #c8a06a;background:transparent;transition:all .3s}
+#dots{display:flex;justify-content:center;align-items:center;gap:10px;padding:10px 0;flex-shrink:0}
+.dot{width:14px;height:14px;border-radius:50%;border:2.5px solid #c8a06a;background:transparent;transition:all .3s}
 .dot.done{background:#c8a06a}
 .dot.active{background:#c05c1a;border-color:#c05c1a;transform:scale(1.25);box-shadow:0 0 8px #c05c1a60}
 
@@ -24,31 +29,25 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 
 /* ── Step title ── */
 .step-title{text-align:center;padding:4px 0 10px;flex-shrink:0}
-.step-title h1{font-size:27px;font-weight:900;color:#2a1600;line-height:1.2}
-.step-title .cn{font-size:20px;color:#7a5a3a;margin-top:3px;display:block;font-weight:600}
+.step-title h1{font-size:26px;font-weight:900;color:#2a1600;line-height:1.2}
+.step-title .cn{font-size:19px;color:#7a5a3a;margin-top:3px;display:block;font-weight:600}
 
 /* ── Content area ── */
 .step-content{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 
-/* ── 3×2 mood grid ── */
-.mood-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);
-  gap:9px;height:100%;
-}
-
-/* ── 2×2 choice grid ── */
-.choice-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);
-  gap:12px;height:100%;
-}
+/* ── Grids ── */
+.mood-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:9px;height:100%}
+.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:12px;height:100%}
+.list-grid{display:flex;flex-direction:column;gap:12px;height:100%;justify-content:center}
+.list-grid .cbtn{flex-direction:row;justify-content:flex-start;gap:16px;min-height:74px;padding:14px 20px;text-align:left}
+.list-grid .cbtn .em{font-size:32px}
+.list-grid .cbtn .txt{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.list-grid .cbtn .en{text-align:left}
 
 /* ── Choice button ── */
-.cbtn{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:5px;border:2.5px solid #e5cfb5;border-radius:18px;
-  background:#fffaf4;cursor:pointer;transition:all .14s;
-  padding:10px 6px;user-select:none;-webkit-user-select:none;min-height:60px;
-}
+.cbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  border:2.5px solid #e5cfb5;border-radius:18px;background:#fffaf4;cursor:pointer;transition:all .14s;
+  padding:10px 6px;user-select:none;-webkit-user-select:none;min-height:60px}
 .cbtn:active,.cbtn:hover{border-color:#c05c1a;background:#fff3e4}
 .cbtn.selected{border-color:#c05c1a;background:#fff3e4;box-shadow:0 0 0 3px #c05c1a35}
 .cbtn .em{font-size:34px;line-height:1;flex-shrink:0}
@@ -58,152 +57,236 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 
 /* ── Navigation ── */
 .step-nav{display:flex;align-items:center;gap:10px;padding:9px 0 12px;flex-shrink:0}
-.back-btn{
-  padding:14px 20px;font-size:18px;font-weight:800;
-  border:2.5px solid #c8a06a;border-radius:13px;
-  background:#fffaf4;color:#7a5a3a;cursor:pointer;min-height:56px;min-width:90px;
-}
+.back-btn{padding:14px 20px;font-size:18px;font-weight:800;border:2.5px solid #c8a06a;border-radius:13px;
+  background:#fffaf4;color:#7a5a3a;cursor:pointer;min-height:56px;min-width:90px}
 .back-btn:hover{background:#fff3e4}
-.next-btn{
-  flex:1;padding:14px 20px;font-size:20px;font-weight:900;
-  border:none;border-radius:13px;background:#c05c1a;color:#fff;
-  cursor:pointer;min-height:56px;letter-spacing:.01em;transition:all .14s;
-}
+.next-btn{flex:1;padding:14px 20px;font-size:20px;font-weight:900;border:none;border-radius:13px;
+  background:#c05c1a;color:#fff;cursor:pointer;min-height:56px;letter-spacing:.01em;transition:all .14s}
 .next-btn:hover:not(:disabled){background:#a84810}
 .next-btn:disabled{background:#e8c8a0;color:#c8a06a;cursor:not-allowed}
-.skip-btn{
-  padding:14px 16px;font-size:16px;font-weight:700;
-  border:2.5px solid #d8c0a8;border-radius:13px;
-  background:transparent;color:#7a5a3a;cursor:pointer;min-height:56px;
-}
+.skip-btn{padding:14px 16px;font-size:16px;font-weight:700;border:2.5px solid #d8c0a8;border-radius:13px;
+  background:transparent;color:#7a5a3a;cursor:pointer;min-height:56px}
 .skip-btn:hover{background:#fff3e4}
 
 /* ── Words step ── */
-#words-area{
-  flex:1;width:100%;border:2.5px solid #e5cfb5;border-radius:14px;
-  padding:14px;font-size:21px;color:#2a1600;background:#fffaf4;
-  resize:none;outline:none;font-family:inherit;line-height:1.6;min-height:0;
-}
+#words-area{flex:1;width:100%;border:2.5px solid #e5cfb5;border-radius:14px;padding:14px;font-size:21px;
+  color:#2a1600;background:#fffaf4;resize:none;outline:none;font-family:inherit;line-height:1.6;min-height:0}
 #words-area:focus{border-color:#c05c1a}
 #words-area::placeholder{color:#c8a06a}
+#title-area{width:100%;border:2.5px solid #e5cfb5;border-radius:12px;padding:12px 14px;font-size:19px;
+  font-weight:700;color:#2a1600;background:#fffaf4;outline:none;font-family:inherit;flex-shrink:0}
+#title-area:focus{border-color:#c05c1a}
+#title-area::placeholder{color:#c8a06a;font-weight:600}
+.help-row{display:flex;gap:8px;flex-shrink:0;padding-top:8px}
+.help-row button{flex:1;padding:11px;font-size:16px;font-weight:800;border-radius:12px;cursor:pointer;min-height:50px}
+#gen-btn{border:2.5px solid #c05c1a;background:#fff3e4;color:#c05c1a}
+#read-btn{border:2.5px solid #c8a06a;background:#fffaf4;color:#7a5a3a}
 .tmpl-row{display:flex;flex-wrap:wrap;gap:7px;padding:8px 0 2px;flex-shrink:0}
-.tbtn{
-  padding:8px 14px;font-size:15px;border:1.5px solid #d8c0a8;
-  border-radius:22px;background:#fffaf4;color:#6b3a10;cursor:pointer;
-  font-weight:600;transition:all .12s;
-}
+.tbtn{padding:8px 14px;font-size:15px;border:1.5px solid #d8c0a8;border-radius:22px;background:#fffaf4;
+  color:#6b3a10;cursor:pointer;font-weight:600;transition:all .12s}
 .tbtn:hover{background:#fff3e4;border-color:#c05c1a}
 
-/* ── Step 5 Play ── */
-#step-5{padding:8px 18px 10px;gap:0}
-#play-btn-big{
-  width:100%;padding:20px;font-size:28px;font-weight:900;
-  border:none;border-radius:18px;background:#388a3c;color:#fff;
-  cursor:pointer;min-height:76px;letter-spacing:.02em;
-  transition:background .14s;flex-shrink:0;
-}
+/* ── Play / Studio step ── */
+#step-6{padding:8px 18px 10px;gap:0}
+#play-btn-big{width:100%;padding:18px;font-size:27px;font-weight:900;border:none;border-radius:18px;
+  background:#388a3c;color:#fff;cursor:pointer;min-height:72px;letter-spacing:.02em;transition:background .14s;flex-shrink:0}
 #play-btn-big:hover{background:#2a6e2e}
 #play-btn-big.playing{background:#1a5e20;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025);box-shadow:0 0 20px #38aa3c60}}
 
-#karaoke-box{
-  flex:1;display:flex;align-items:center;justify-content:center;text-align:center;
-  padding:12px;border-radius:14px;background:#fffaf4;border:2.5px dashed #e5cfb5;
-  margin:9px 0;min-height:80px;overflow:hidden;
-}
+#karaoke-box{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
+  border-radius:14px;background:#fffaf4;border:2.5px dashed #e5cfb5;margin:9px 0;min-height:70px;overflow:hidden}
 #karaoke-text{font-size:23px;line-height:1.6;color:#2a1600;word-break:break-word;max-height:100%;overflow:hidden}
-#karaoke-text .kw{transition:all .25s;opacity:.35}
-#karaoke-text .kw.hi{color:#c05c1a;opacity:1;font-weight:800}
+.kw{transition:all .25s;opacity:.35}
+.kw.hi{color:#c05c1a;opacity:1;font-weight:800}
 
-#play-status{
-  text-align:center;font-size:16px;color:#7a5a3a;padding:2px 0 6px;
-  flex-shrink:0;font-weight:600;
-}
-#play-actions{display:flex;gap:10px;flex-shrink:0}
-#play-actions button{
-  flex:1;padding:13px;font-size:16px;font-weight:800;border-radius:13px;
-  cursor:pointer;min-height:52px;border:2.5px solid;transition:background .12s;
-}
-#again-btn{background:#fffaf4;border-color:#c05c1a;color:#c05c1a}
-#again-btn:hover{background:#fff3e4}
-#save-btn{background:#fffaf4;border-color:#388a3c;color:#388a3c}
-#save-btn:hover{background:#f0faf0}
-#restart-btn{background:#fffaf4;border-color:#7a5a3a;color:#7a5a3a}
-#restart-btn:hover{background:#fff3e4}
+#play-status{text-align:center;font-size:15px;color:#7a5a3a;padding:2px 0 4px;flex-shrink:0;font-weight:600;min-height:20px}
+
+.ctrl-row{display:flex;gap:8px;flex-shrink:0;margin-top:7px}
+.ctrl-row button{flex:1;padding:11px 4px;font-size:14px;font-weight:800;border-radius:12px;
+  border:2.5px solid #c8a06a;background:#fffaf4;color:#7a5a3a;cursor:pointer;min-height:50px;line-height:1.15}
+.ctrl-row button:hover{background:#fff3e4}
+.ctrl-row button.on{border-color:#c05c1a;color:#c05c1a;background:#fff3e4}
+.ctrl-row button.go{border-color:#c05c1a;background:#fff3e4;color:#c05c1a}
+.ctrl-row button:disabled{opacity:.5;cursor:wait}
+
+/* ── Stage Mode ── */
+#stage{position:fixed;inset:0;z-index:5000;background:radial-gradient(circle at 50% 30%,#3a2208,#160d03);
+  color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;text-align:center;cursor:pointer}
+#stage[hidden]{display:none}
+#stage-exit{position:absolute;top:16px;right:16px;font-size:24px;width:58px;height:58px;border-radius:50%;
+  border:2px solid #ffffff55;background:#ffffff18;color:#fff;cursor:pointer;z-index:2}
+#stage-size{position:absolute;top:16px;left:16px;display:flex;gap:8px;z-index:2}
+#stage-size button{width:54px;height:54px;border-radius:14px;border:2px solid #ffffff55;background:#ffffff18;
+  color:#fff;font-size:20px;font-weight:800;cursor:pointer}
+
+/* ── Live Jam (3×3 DJ pad) ── */
+#jam{position:fixed;inset:0;z-index:5500;background:radial-gradient(circle at 50% 22%,#241608,#110902);
+  color:#fff;display:flex;flex-direction:column;align-items:center;padding:16px}
+#jam[hidden]{display:none}
+#jam-exit{position:absolute;top:14px;right:14px;width:54px;height:54px;border-radius:50%;
+  border:2px solid #ffffff55;background:#ffffff18;color:#fff;font-size:22px;cursor:pointer;z-index:2}
+#jam-title{font-size:22px;font-weight:900;margin-top:6px;color:#ffcf8a}
+#jam-now{font-size:18px;font-weight:700;opacity:.9;min-height:24px;margin:6px 0 12px;text-align:center}
+#jam-pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:12px;
+  width:100%;max-width:560px;flex:1;max-height:640px}
+.pad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:18px;
+  border:3px solid;background:#ffffff10;color:#fff;cursor:pointer;font-weight:800;padding:6px;
+  user-select:none;-webkit-user-select:none;transition:transform .08s,box-shadow .12s,background .12s}
+.pad .pe{font-size:33px;line-height:1}
+.pad .pl{font-size:17px}
+.pad .pc{font-size:13px;opacity:.85;font-weight:600}
+.pad:active{transform:scale(.95)}
+.pad{position:relative}
+.pad .pk{position:absolute;top:5px;left:9px;font-size:12px;font-weight:800;opacity:.5}
+.pad .pp{position:absolute;top:5px;right:8px;font-size:10px;font-weight:800;color:#aaccff;opacity:.85;
+  max-width:60px;text-align:right;line-height:1.05}
+.pad.flash{filter:brightness(1.55)}
+#jam-keyhint{font-size:13px;opacity:.6;margin-top:10px;text-align:center}
+#jam-opts{margin-bottom:10px}
+#jam-opts button{padding:9px 14px;border-radius:12px;border:2px solid #4d7fc0aa;background:#ffffff10;
+  color:#fff;font-weight:800;font-size:14px;cursor:pointer}
+#jam-opts button.active{background:#3a6bb0;border-color:#aaccff;box-shadow:0 0 14px #4d7fc0}
+.pad.sec{border-color:#c05c1a88}
+.pad.sec.active{background:#c05c1a;border-color:#ffcf8a;box-shadow:0 0 24px #c05c1a}
+.pad.feel{border-color:#4d7fc088}
+.pad.feel.active{background:#3a6bb0;border-color:#aaccff;box-shadow:0 0 24px #4d7fc0}
+.pad.ctrl{border-color:#388a3c88}
+.pad.ctrl.active{background:#2f7a33;border-color:#9be29f;box-shadow:0 0 24px #388a3c}
+.pad.chord{border-color:#b06ac0aa}
+.pad.chord.flash{background:#8a4d9e;border-color:#e6c4ff;box-shadow:0 0 26px #b06ac0}
+.pad.drum{border-color:#c0504daa}
+.pad.drum.flash{background:#a83f3c;border-color:#ffc0b3;box-shadow:0 0 26px #c0504d}
+.pad.drum.active{background:#a83f3c;border-color:#ffc0b3;box-shadow:0 0 24px #c0504d}
+.pad.queued{animation:padPulse .55s ease-in-out infinite}
+@keyframes padPulse{0%,100%{opacity:1}50%{opacity:.4}}
+#jam-banks{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center}
+#jam-banks button{padding:10px 14px;border-radius:12px;border:2px solid #ffffff44;background:#ffffff12;
+  color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+#jam-banks button.active{background:#ffcf8a;color:#2a1600;border-color:#ffcf8a}
+#stage-count{font-size:150px;font-weight:900;color:#ffcf8a;text-shadow:0 0 30px #c05c1a}
+#stage-lyrics{font-size:clamp(28px,6vw,52px);line-height:1.5;font-weight:800;max-width:1000px;max-height:74vh;overflow-y:auto;scrollbar-width:none}
+#stage-lyrics::-webkit-scrollbar{display:none}
+#stage-lyrics .kw{opacity:.38}
+#stage-lyrics .kw.hi{opacity:1;color:#ffcf8a;text-shadow:0 0 18px #c05c1a90}
+#stage-hint{position:absolute;bottom:22px;font-size:16px;color:#ffffff66}
+
+/* ── Song Book ── */
+#book{position:fixed;inset:0;z-index:6000;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
+#book[hidden]{display:none}
+#book .sheet{background:#fffaf4;border-radius:18px;padding:22px;max-width:620px;width:100%;max-height:82vh;overflow:auto}
+#book h2{color:#2a1600;font-size:24px;margin-bottom:14px;text-align:center}
+.song-item{display:flex;gap:8px;align-items:center;border:2px solid #e5cfb5;border-radius:13px;padding:11px;margin-bottom:9px}
+.song-item .nm{flex:1;min-width:0}
+.song-item .nm .t{font-weight:800;color:#2a1600;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-item .nm .s{font-size:13px;color:#7a5a3a}
+.song-item button{padding:10px 13px;border-radius:11px;border:2.5px solid #c8a06a;background:#fffaf4;cursor:pointer;font-weight:800;font-size:15px}
+.song-item button.play{border-color:#388a3c;color:#388a3c}
+.song-item button.del{border-color:#c05c1a;color:#c05c1a}
+#book .empty{text-align:center;color:#b8906a;padding:24px 0;font-size:17px}
+#book .close{width:100%;margin-top:8px;padding:14px;font-size:18px;font-weight:800;border-radius:13px;
+  border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
+
+/* ── Chords sheet ── */
+#chords{position:fixed;inset:0;z-index:6000;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
+#chords[hidden]{display:none}
+#chords .sheet{background:#fffaf4;border-radius:18px;padding:22px;max-width:620px;width:100%;max-height:84vh;overflow:auto}
+#chords h2{color:#2a1600;font-size:21px;margin-bottom:14px;text-align:center}
+.lift-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid #e5cfb5;
+  border-radius:13px;padding:12px 14px;margin-bottom:14px;font-weight:800;color:#2a1600;font-size:16px}
+.lift-row button{padding:11px 20px;border-radius:11px;border:2.5px solid #c8a06a;background:#fffaf4;
+  font-weight:800;cursor:pointer;color:#7a5a3a;min-width:84px}
+.lift-row button.on{background:#c05c1a;border-color:#c05c1a;color:#fff}
+.prog-item{display:flex;gap:10px;align-items:center;border:2px solid #e5cfb5;border-radius:13px;
+  padding:11px 12px;margin-bottom:9px;cursor:pointer}
+.prog-item.sel{border-color:#c05c1a;background:#fff3e4;box-shadow:0 0 0 3px #c05c1a35}
+.prog-item .pn{flex:1;min-width:0}
+.prog-item .pn .t{font-weight:800;color:#2a1600;font-size:17px}
+.prog-item .pn .c{font-size:15px;color:#7a5a3a;font-family:ui-monospace,monospace;margin-top:2px}
+.prog-item .prev{padding:11px 16px;border-radius:11px;border:2.5px solid #388a3c;background:#fffaf4;
+  color:#388a3c;font-weight:800;cursor:pointer;font-size:17px}
+#chords .close{width:100%;margin-top:6px;padding:14px;font-size:18px;font-weight:800;border-radius:13px;
+  border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#2a1600;color:#fff;
+  padding:13px 22px;border-radius:26px;font-weight:700;font-size:16px;z-index:7000;opacity:0;
+  transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center}
+#toast.show{opacity:.96}
 
 /* ── Confetti ── */
-@keyframes confFall{
-  0%{transform:translateY(-10px) rotate(0deg);opacity:1}
-  80%{opacity:1}
-  100%{transform:translateY(105vh) rotate(600deg);opacity:0}
-}
+@keyframes confFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}80%{opacity:1}
+  100%{transform:translateY(105vh) rotate(600deg);opacity:0}}
 </style>
 </head>
 <body>
+
+<div id="topbar">
+  <button id="resume-btn" title="Continue last song" onclick="resumeDraft()" hidden>↩️</button>
+  <button id="jam-toggle" title="Live Jam pad" onclick="openJam()">🎛</button>
+  <button id="tts-toggle" title="Read aloud" onclick="toggleTTS()">🔈</button>
+  <button id="book-toggle" title="My songs" onclick="openBook()">📖</button>
+</div>
+
 <div id="app">
 
 <!-- Progress dots -->
 <div id="dots">
-  <div class="dot active" id="d1"></div>
-  <div class="dot" id="d2"></div>
-  <div class="dot" id="d3"></div>
-  <div class="dot" id="d4"></div>
-  <div class="dot" id="d5"></div>
+  <div class="dot active" id="d1"></div><div class="dot" id="d2"></div>
+  <div class="dot" id="d3"></div><div class="dot" id="d4"></div>
+  <div class="dot" id="d5"></div><div class="dot" id="d6"></div>
 </div>
 
-<!-- ═══ STEP 1: MOOD ═══ -->
+<!-- STEP 1: MOOD -->
 <div class="step active" id="step-1">
-  <div class="step-title">
-    <h1>How are you feeling today?</h1>
-    <span class="cn">你今天心情如何？</span>
-  </div>
-  <div class="step-content">
-    <div class="mood-grid" id="mood-grid"></div>
-  </div>
+  <div class="step-title"><h1>How are you feeling today?</h1><span class="cn">你今天心情如何？</span></div>
+  <div class="step-content"><div class="mood-grid" id="mood-grid"></div></div>
   <div class="step-nav">
+    <button class="back-btn" onclick="surpriseMe()" style="min-width:118px">🎲 Surprise<br><span style="font-size:12px;font-weight:600">随机一首</span></button>
     <button class="next-btn" id="next-1" disabled onclick="goNext()">Next ➡</button>
   </div>
 </div>
 
-<!-- ═══ STEP 2: RHYTHM ═══ -->
+<!-- STEP 2: RHYTHM -->
 <div class="step" id="step-2">
-  <div class="step-title">
-    <h1>Pick a rhythm</h1>
-    <span class="cn">选个节拍</span>
-  </div>
-  <div class="step-content">
-    <div class="choice-grid" id="rhythm-grid"></div>
-  </div>
+  <div class="step-title"><h1>Pick a rhythm</h1><span class="cn">选个节拍</span></div>
+  <div class="step-content"><div class="choice-grid" id="rhythm-grid"></div></div>
   <div class="step-nav">
     <button class="back-btn" onclick="goBack()">⬅ Back</button>
     <button class="next-btn" id="next-2" disabled onclick="goNext()">Next ➡</button>
   </div>
 </div>
 
-<!-- ═══ STEP 3: INSTRUMENT ═══ -->
+<!-- STEP 3: INSTRUMENT -->
 <div class="step" id="step-3">
-  <div class="step-title">
-    <h1>Choose your sound</h1>
-    <span class="cn">选个声音</span>
-  </div>
-  <div class="step-content">
-    <div class="choice-grid" id="instrument-grid"></div>
-  </div>
+  <div class="step-title"><h1>Choose your sound</h1><span class="cn">选个声音</span></div>
+  <div class="step-content"><div class="choice-grid" id="instrument-grid"></div></div>
   <div class="step-nav">
     <button class="back-btn" onclick="goBack()">⬅ Back</button>
     <button class="next-btn" id="next-3" disabled onclick="goNext()">Next ➡</button>
   </div>
 </div>
 
-<!-- ═══ STEP 4: WORDS ═══ -->
+<!-- STEP 4: SONG SHAPE -->
 <div class="step" id="step-4">
-  <div class="step-title">
-    <h1>Add your words</h1>
-    <span class="cn">加你的话（可以不填）</span>
+  <div class="step-title"><h1>How long is your song?</h1><span class="cn">你的歌有多长？</span></div>
+  <div class="step-content"><div class="list-grid" id="shape-grid"></div></div>
+  <div class="step-nav">
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+    <button class="next-btn" id="next-4" onclick="goNext()">Next ➡</button>
   </div>
+</div>
+
+<!-- STEP 5: WORDS -->
+<div class="step" id="step-5">
+  <div class="step-title"><h1>Add your words</h1><span class="cn">加你的话（可以不填）</span></div>
   <div class="step-content" style="gap:8px;display:flex;flex-direction:column">
-    <textarea id="words-area"
-      placeholder="Type anything... a memory, a feeling, a message to family&#10;写下任何想说的话..."></textarea>
+    <input id="title-area" type="text" maxlength="60" placeholder="Song title (optional) 歌名（可不填）">
+    <textarea id="words-area" placeholder="Type anything... a memory, a feeling, a message to family&#10;写下任何想说的话..."></textarea>
+    <div class="help-row">
+      <button id="gen-btn" onclick="helpWrite()">✨ Help me write 帮我写</button>
+      <button id="read-btn" onclick="readWords()">🔊 Read aloud 朗读</button>
+    </div>
     <div class="tmpl-row">
       <button class="tbtn" onclick="tmpl('Today I feel ')">Today I feel...</button>
       <button class="tbtn" onclick="tmpl('I remember when ')">I remember when...</button>
@@ -218,29 +301,94 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   </div>
 </div>
 
-<!-- ═══ STEP 5: PLAY ═══ -->
-<div class="step" id="step-5">
-  <div class="step-title" style="padding-bottom:5px">
-    <h1>🎵 Your Song!</h1>
-    <span class="cn">你的歌！</span>
-  </div>
+<!-- STEP 6: PLAY / STUDIO -->
+<div class="step" id="step-6">
+  <div class="step-title" style="padding-bottom:4px"><h1>🎵 Your Song!</h1><span class="cn">你的歌！</span></div>
   <div class="step-content" style="display:flex;flex-direction:column;gap:0">
     <button id="play-btn-big" onclick="toggleSong()">▶ Play Your Song</button>
-    <div id="karaoke-box">
-      <div id="karaoke-text" style="color:#c8a06a;font-size:19px">
-        Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>
-      </div>
-    </div>
+    <div id="karaoke-box"><div id="karaoke-text" style="color:#c8a06a;font-size:19px">
+      Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>
+    </div></div>
     <div id="play-status"></div>
-    <div id="play-actions">
-      <button id="again-btn" onclick="replaySong()">▶ Again</button>
-      <button id="save-btn" onclick="saveSong()">💾 Save</button>
-      <button id="restart-btn" onclick="restart()">🔄 New</button>
+    <div class="ctrl-row">
+      <button class="go" onclick="openChords()">🎹 Change the chords · 换和弦走向</button>
+    </div>
+    <div class="ctrl-row">
+      <button id="tempo-btn" onclick="toggleTempo()">🐢 Slower<br><span style="font-size:11px">慢一点</span></button>
+      <button onclick="changeKey(-1)">🔽 Lower<br><span style="font-size:11px">低音</span></button>
+      <button onclick="changeKey(1)">🔼 Higher<br><span style="font-size:11px">高音</span></button>
+      <button id="key-btn" onclick="findMyKey()">🎤 My key<br><span style="font-size:11px">找音高</span></button>
+    </div>
+    <div class="ctrl-row">
+      <button class="go" onclick="enterStage()">🎤 Stage 上台</button>
+      <button onclick="practiceChorus()">🔂 Practice 练习</button>
+      <button id="save-btn" onclick="saveWav()">💾 Save 保存</button>
+      <button onclick="shareLink()">🔗 Share 分享</button>
+    </div>
+    <div class="ctrl-row">
+      <button onclick="saveLyricSheet()">📄 Lyrics 歌词</button>
+      <button onclick="printLyricSheet()">🖨 Print 打印</button>
+      <button onclick="saveToBook()">⭐ Keep 收藏</button>
+      <button onclick="restart()">🔄 New 新歌</button>
     </div>
   </div>
 </div>
 
 </div><!-- #app -->
+
+<!-- Stage Mode overlay -->
+<div id="stage" hidden onclick="stageStop()">
+  <button id="stage-exit" onclick="event.stopPropagation();stageStop()">✕</button>
+  <div id="stage-size">
+    <button onclick="event.stopPropagation();stageSize(-8)" title="Smaller text">A−</button>
+    <button onclick="event.stopPropagation();stageSize(8)" title="Bigger text">A+</button>
+  </div>
+  <div id="stage-count"></div>
+  <div id="stage-lyrics"></div>
+  <div id="stage-hint">Tap anywhere to stop · 点击停止</div>
+</div>
+
+<!-- Live Jam overlay -->
+<div id="jam" hidden>
+  <button id="jam-exit" onclick="closeJam()">✕</button>
+  <div id="jam-title">🎛 Live Jam · 现场演奏</div>
+  <div id="jam-now"></div>
+  <div id="jam-banks">
+    <button data-bank="chords" onclick="setBank('chords')">🎹 Chords</button>
+    <button data-bank="sections" onclick="setBank('sections')">🎵 Parts</button>
+    <button data-bank="feel" onclick="setBank('feel')">🎶 Feel</button>
+    <button data-bank="drums" onclick="setBank('drums')">🥁 Drums</button>
+  </div>
+  <div id="jam-opts">
+    <button id="prog-overlay" onclick="toggleProgOverlay()">🎶 Each pad also changes the chords · 每个键换和弦</button>
+  </div>
+  <div id="jam-pad"></div>
+  <div id="jam-keyhint">Tip: press number keys &nbsp;7 8 9 / 4 5 6 / 1 2 3&nbsp; · 数字键</div>
+</div>
+
+<!-- Chords sheet -->
+<div id="chords" hidden>
+  <div class="sheet">
+    <h2>🎹 How should the chords move? · 和弦走向</h2>
+    <div class="lift-row">
+      <span>⬆ Make the chorus lift · 副歌升级</span>
+      <button id="lift-toggle" onclick="toggleChorusLift()">Off 关</button>
+    </div>
+    <div id="chords-list"></div>
+    <button class="close" onclick="closeChords()">Done 完成</button>
+  </div>
+</div>
+
+<!-- Song Book overlay -->
+<div id="book" hidden>
+  <div class="sheet">
+    <h2>📖 My Songs · 我的歌</h2>
+    <div id="book-list"></div>
+    <button class="close" onclick="closeBook()">Close 关闭</button>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
 'use strict';
@@ -284,32 +432,77 @@ const RHYTHMS = [
 ];
 
 const INSTRUMENTS = [
-  { id:'piano',      emoji:'🎹', en:'Piano',     cn:'钢琴',
-    osc:'triangle8', env:{attack:.02,decay:.5,sustain:.3,release:1.5}, vol:-9 },
-  { id:'guitar',     emoji:'🎸', en:'Guitar',    cn:'吉他',
-    osc:'sawtooth',  env:{attack:.001,decay:.22,sustain:0,release:.45}, vol:-10 },
-  { id:'oldies',     emoji:'🎷', en:'Oldies',    cn:'老歌',
-    osc:'sine',      env:{attack:.1,decay:.4,sustain:.85,release:2.5}, vol:-9 },
-  { id:'orchestra',  emoji:'🎻', en:'Orchestra', cn:'管弦乐',
-    osc:'triangle',  env:{attack:.4,decay:.5,sustain:.85,release:3.5}, vol:-8 },
+  { id:'piano',     emoji:'🎹', en:'Piano',     cn:'钢琴',  osc:'triangle8', env:{attack:.02,decay:.5,sustain:.3,release:1.5}, vol:-9 },
+  { id:'guitar',    emoji:'🎸', en:'Guitar',    cn:'吉他',  osc:'sawtooth',  env:{attack:.001,decay:.22,sustain:0,release:.45}, vol:-10 },
+  { id:'oldies',    emoji:'🎷', en:'Oldies',    cn:'老歌',  osc:'sine',      env:{attack:.1,decay:.4,sustain:.85,release:2.5}, vol:-9 },
+  { id:'orchestra', emoji:'🎻', en:'Orchestra', cn:'管弦乐', osc:'triangle',  env:{attack:.4,decay:.5,sustain:.85,release:3.5}, vol:-8 },
 ];
+
+const STRUCTURES = [
+  { id:'short',   emoji:'🌱', en:'Short & Sweet', cn:'简短', desc:'About 1 minute · 大约一分钟',
+    sections:['intro','verse','chorus','outro'] },
+  { id:'classic', emoji:'🎼', en:'Classic Song',  cn:'经典', desc:'Verse, chorus, verse · 一般歌曲',
+    sections:['intro','verse','chorus','verse','chorus','outro'] },
+  { id:'full',    emoji:'🎤', en:'Full Song',     cn:'完整', desc:'With a bridge, about 2½ min · 完整版',
+    sections:['intro','verse','chorus','verse','chorus','bridge','chorus','outro'] },
+];
+
+const SECTION_BARS = { intro:4, verse:8, chorus:8, bridge:8, outro:4 };
+const ARR = {
+  intro:  { drums:'none',  bass:false, melody:false, chordVel:0.7 },
+  verse:  { drums:'light', bass:true,  melody:false, chordVel:0.85 },
+  chorus: { drums:'full',  bass:true,  melody:true,  chordVel:1.0 },
+  bridge: { drums:'full',  bass:true,  melody:false, chordVel:0.9 },
+  outro:  { drums:'light', bass:true,  melody:false, chordVel:0.7 },
+};
+const SEC_LABEL = {
+  intro:{en:'Intro',cn:'前奏'}, verse:{en:'Verse',cn:'主歌'},
+  chorus:{en:'Chorus',cn:'副歌'}, bridge:{en:'Bridge',cn:'桥段'}, outro:{en:'Outro',cn:'尾奏'},
+};
+// When "chorus lift" is on, the chorus uses these chords (IV–V–vi–I) for a classic uplifting feel.
+const CHORUS_LIFT = [3,4,5,0];
+
+// ── Lyric templates (client-side helper) ──
+const LYRICS = {
+  happy:    { topic:'this happy day',
+    verse:['The sun is shining warm and bright','I think of {topic} and I smile','My heart is full, my step is light','Let\'s sing together for a while'],
+    chorus:['Oh, what a wonderful day','Joy is coming our way','Clap your hands and sing along','Happiness in every song'] },
+  sad:      { topic:'the ones I miss',
+    verse:['The evening falls so soft and slow','I think of {topic} tonight','Some gentle tears begin to flow','But memories still shine so bright'],
+    chorus:['I carry you here in my heart','Even when we are apart','Through the rain the love still stays','In my quiet, tender days'] },
+  peaceful: { topic:'the quiet evening',
+    verse:['The world is calm, the sky is clear','I breathe in {topic} slow','A peaceful feeling drawing near','Let all my worries gently go'],
+    chorus:['Peace be still, peace be near','Nothing left to fear','Like a river soft and wide','Calm is flowing deep inside'] },
+  energetic:{ topic:'this brand new day',
+    verse:['Wake up now, the morning calls','I feel {topic} alive','Stand up tall and break the walls','Together we will thrive'],
+    chorus:['Come on, let\'s go, let\'s rise','Reach up to the skies','Every beat is calling loud','Sing it strong and proud'] },
+  loving:   { topic:'the one I love',
+    verse:['Your gentle hand, your warm embrace','I think of {topic} every day','A tender smile upon your face','You take my lonely fears away'],
+    chorus:['You are my song, you are my light','Holding me through the night','In your love I find my home','Never again to be alone'] },
+  nostalgic:{ topic:'the days gone by',
+    verse:['I close my eyes and travel back','To {topic} long ago','Old familiar streets and tracks','And faces that I used to know'],
+    chorus:['Those golden years, those golden days','Live on in gentle ways','Time may pass but I recall','The sweetest memories of all'] },
+};
 
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-const S = { step:1, mood:null, rhythm:null, instrument:null, words:'', playing:false, played:false };
+const S = {
+  step:1, mood:null, rhythm:null, instrument:null, structure:STRUCTURES[1],
+  title:'', words:'', transpose:0, tempoMul:1, playing:false, played:false,
+  progression:null, chorusLift:false,   // null progression = use the mood's own chords
+};
+let ttsOn = false;
 
 // ═══════════════════════════════════════════════════════
-// MUSIC THEORY
+// MUSIC THEORY  (transpose applied centrally)
 // ═══════════════════════════════════════════════════════
 function nMidi(name, oct){ return NOTES.indexOf(name) + (oct + 1) * 12; }
+function toNoteT(midi){ return Tone.Frequency(midi + (S.transpose||0), 'midi').toNote(); }
 
-// Build chord from the chord's own root in a given octave
 function buildChord(rootName, scaleName, deg, oct=4, add7=false){
   const sc = SCALES[scaleName];
-  const scRI = NOTES.indexOf(rootName);
-  // Chord root = root + scale[deg] semitones
-  const chordRootIdx = (scRI + sc[deg]) % 12;
+  const chordRootIdx = (NOTES.indexOf(rootName) + sc[deg]) % 12;
   const chordBase = nMidi(NOTES[chordRootIdx], oct);
   const midis = [chordBase]; let prev = chordBase;
   const offsets = add7 ? [2,4,6] : [2,4];
@@ -321,76 +514,107 @@ function buildChord(rootName, scaleName, deg, oct=4, add7=false){
     while(m <= prev) m += 12;
     midis.push(m); prev = m;
   }
-  return midis.map(m => Tone.Frequency(m,'midi').toNote());
+  return midis.map(toNoteT);
 }
-
 function rootOfChord(rootName, scaleName, deg, oct=2){
   const sc = SCALES[scaleName];
   const chordRootIdx = (NOTES.indexOf(rootName) + sc[deg]) % 12;
-  return Tone.Frequency(nMidi(NOTES[chordRootIdx], oct), 'midi').toNote();
+  return toNoteT(nMidi(NOTES[chordRootIdx], oct));
+}
+function melodyNote(rootName, scaleName, deg, beat){
+  const ch = buildChord(rootName, scaleName, deg, 5, false);
+  const pick = [0,2,1,2][beat % 4];
+  return ch[Math.min(pick, ch.length - 1)];
 }
 
 // ═══════════════════════════════════════════════════════
-// AUDIO NODES
+// SONG PLAN
+// ═══════════════════════════════════════════════════════
+let barPlan = [], totalBars = 0;
+function buildPlan(){
+  barPlan = [];
+  for(const sec of S.structure.sections){
+    const n = SECTION_BARS[sec] || 4;
+    for(let i=0;i<n;i++) barPlan.push(sec);
+  }
+  totalBars = barPlan.length;
+}
+function stepActions(g){
+  const bar = Math.floor(g / 16), ds = g % 16;
+  const type = barPlan[bar] || 'verse';
+  const arr = ARR[type];
+  let degs, use7;
+  if(S.chorusLift && type === 'chorus'){
+    degs = CHORUS_LIFT; use7 = !!S.mood.use7;          // lift the chorus to different chords
+  } else {
+    degs = S.progression ? S.progression.degs : S.mood.degs;
+    use7 = S.progression ? !!S.progression.use7 : !!S.mood.use7;
+  }
+  const deg = degs[bar % degs.length];
+  const rhy = S.rhythm || { kick:[], snare:[], hihat:[], clap:[] };
+  const a = { chord:null, bass:null, kick:false, snare:false, hihat:false, clap:false, melody:null, chordVel:arr.chordVel };
+  if(arr.drums === 'full'){
+    a.kick=!!rhy.kick[ds]; a.snare=!!rhy.snare[ds]; a.hihat=!!rhy.hihat[ds]; a.clap=!!rhy.clap[ds];
+  } else if(arr.drums === 'light'){
+    a.kick=!!rhy.kick[ds]; a.hihat=!!rhy.hihat[ds];
+  }
+  if(ds === 0){
+    a.chord = buildChord(S.mood.key, S.mood.scale, deg, 4, use7);
+    if(arr.bass) a.bass = rootOfChord(S.mood.key, S.mood.scale, deg, 2);
+  }
+  if(arr.melody && ds % 4 === 0) a.melody = melodyNote(S.mood.key, S.mood.scale, deg, ds / 4);
+  return a;
+}
+
+// ═══════════════════════════════════════════════════════
+// AUDIO NODES (live)
 // ═══════════════════════════════════════════════════════
 const masterRev = new Tone.Reverb({ decay:2, wet:.14, preDelay:.01 });
 masterRev.generate().catch(()=>{});
 masterRev.toDestination();
-
 const dryBus = new Tone.Gain(1).toDestination();
 
 const kickS  = new Tone.MembraneSynth({pitchDecay:.05,octaves:7,envelope:{attack:.001,decay:.32,sustain:0,release:.1},volume:-3}).connect(dryBus);
 const snareS = new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0,release:.07},volume:-9}).connect(dryBus);
 const hihatS = new Tone.MetalSynth({frequency:400,harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5,envelope:{attack:.001,decay:.06,release:.01},volume:-15}).connect(dryBus);
-
 const chimeS = new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.2,sustain:0,release:.5},volume:-16}).connect(masterRev);
 
-let chordSyn = null, bassSyn = null;
-
+let chordSyn=null, bassSyn=null, melSyn=null;
 function makeChordSyn(inst){
   try{ chordSyn?.dispose(); }catch(e){}
-  chordSyn = new Tone.PolySynth(Tone.Synth,{
-    oscillator:{type:inst.osc}, envelope:inst.env, volume:inst.vol
-  }).connect(masterRev);
+  chordSyn = new Tone.PolySynth(Tone.Synth,{oscillator:{type:inst.osc},envelope:inst.env,volume:inst.vol}).connect(masterRev);
 }
 function makeBassSyn(){
   try{ bassSyn?.dispose(); }catch(e){}
-  bassSyn = new Tone.MonoSynth({
-    oscillator:{type:'sawtooth'},
-    filter:{Q:1.2,type:'lowpass',rolloff:-24},
+  bassSyn = new Tone.MonoSynth({oscillator:{type:'sawtooth'},filter:{Q:1.2,type:'lowpass',rolloff:-24},
     envelope:{attack:.01,decay:.1,sustain:.8,release:.3},
-    filterEnvelope:{attack:.001,decay:.18,sustain:.4,release:.2,baseFrequency:160,octaves:3.5},
-    volume:-6,
-  }).connect(masterRev);
+    filterEnvelope:{attack:.001,decay:.18,sustain:.4,release:.2,baseFrequency:160,octaves:3.5},volume:-6}).connect(masterRev);
 }
-
+function makeMelSyn(){
+  try{ melSyn?.dispose(); }catch(e){}
+  melSyn = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-11}).connect(masterRev);
+}
 function chime(n='G5'){ try{ chimeS.triggerAttackRelease(n,'16n',Tone.now()); }catch(e){} }
 
 // ═══════════════════════════════════════════════════════
 // PREVIEW (Steps 2 & 3)
 // ═══════════════════════════════════════════════════════
 let previewSeq = null;
-
 function stopPreview(){
   if(previewSeq){ try{ previewSeq.stop(); previewSeq.dispose(); }catch(e){} previewSeq=null; }
-  Tone.Transport.stop();
-  Tone.Transport.cancel();
+  Tone.Transport.stop(); Tone.Transport.cancel();
 }
-
 async function previewRhythm(rhy){
   await Tone.start(); stopPreview();
-  Tone.Transport.bpm.value = 100;
-  let bars = 0;
+  Tone.Transport.bpm.value = 100; let bars = 0;
   previewSeq = new Tone.Sequence((time,i)=>{
     if(rhy.kick[i])  kickS.triggerAttackRelease('C1','16n',time);
     if(rhy.snare[i]) snareS.triggerAttackRelease('8n',time);
     if(rhy.hihat[i]) hihatS.triggerAttackRelease('C5','32n',time);
     if(i===15){ bars++; if(bars>=2) setTimeout(stopPreview, 300); }
   }, [...Array(16).keys()], '16n');
-  previewSeq.start(0);
-  Tone.Transport.start('+0.05');
+  previewSeq.start(0); Tone.Transport.start('+0.05');
 }
-
 async function previewInstrument(inst){
   await Tone.start(); stopPreview();
   makeChordSyn(inst);
@@ -403,48 +627,98 @@ async function previewInstrument(inst){
 // ═══════════════════════════════════════════════════════
 // SONG PLAYBACK
 // ═══════════════════════════════════════════════════════
-let gstep = 0, songTimer = null, kTimers = [], countdown = null;
+let gstep=0, songTimer=null, kTimers=[], countdown=null, playStart=0;
+let karaokeTarget = null;
+function fmtTime(s){ return `${Math.floor(s/60)}:${String(Math.max(0,s)%60).padStart(2,'0')}`; }
+
+// Trigger one 16th-step on the LIVE synths (shared by playSong + practiceChorus)
+function fireStep(a, time){
+  if(a.kick)  kickS.triggerAttackRelease('C1','16n',time);
+  if(a.snare) snareS.triggerAttackRelease('8n',time);
+  if(a.hihat) hihatS.triggerAttackRelease('C5','32n',time);
+  if(a.clap)  snareS.triggerAttackRelease('16n',time);
+  if(a.chord){ try{ chordSyn.releaseAll(time); chordSyn.triggerAttackRelease(a.chord,'2n',time+.01,a.chordVel); }catch(e){} }
+  if(a.bass)   try{ bassSyn.triggerAttackRelease(a.bass,'4n',time+.01); }catch(e){}
+  if(a.melody) try{ melSyn.triggerAttackRelease(a.melody,'4n',time+.01); }catch(e){}
+}
+
+// First [start,end) bar range of a section type in the current plan (null if absent)
+function sectionRange(type){
+  let start = -1;
+  for(let i=0;i<barPlan.length;i++){
+    if(barPlan[i]===type){ if(start<0) start=i; }
+    else if(start>=0) return { start, end:i };
+  }
+  return start>=0 ? { start, end:barPlan.length } : null;
+}
 
 function stopSong(){
   S.playing = false;
-  clearTimeout(songTimer);
-  clearInterval(countdown);
+  clearTimeout(songTimer); clearInterval(countdown);
   kTimers.forEach(clearTimeout); kTimers = [];
   Tone.Transport.stop(); Tone.Transport.cancel();
   try{ chordSyn?.releaseAll(); }catch(e){}
+  try{ melSyn?.triggerRelease(); }catch(e){}
   const btn = document.getElementById('play-btn-big');
   btn.textContent = '▶ Play Your Song';
   btn.classList.remove('playing');
   document.getElementById('play-status').textContent = '';
 }
-
+function finishSong(){
+  const onStage = !document.getElementById('stage').hidden;
+  stopSong();
+  if(onStage){
+    document.getElementById('stage-lyrics').innerHTML = '🎉 Bravo! 太棒了！';
+    document.getElementById('stage-hint').textContent = 'Tap to finish · 点击结束';
+  } else {
+    document.getElementById('play-status').textContent = '🎉 That\'s your song! 你的歌做好了！';
+    document.getElementById('play-btn-big').textContent = '▶ Play Again';
+  }
+}
 function replaySong(){ stopSong(); playSong(); }
+
+async function practiceChorus(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  if(S.playing){ stopSong(); return; }   // toggle off if already playing
+  await Tone.start();
+  stopPreview(); buildPlan();
+  const r = sectionRange('chorus') || sectionRange('verse');
+  if(!r){ toast('Nothing to practice yet 没有可练习的部分'); return; }
+  makeChordSyn(S.instrument); makeBassSyn(); makeMelSyn();
+  const bpm = Math.round(S.mood.bpm * S.tempoMul);
+  Tone.Transport.bpm.value = bpm;
+  const startStep = r.start * 16, endStep = r.end * 16;
+  gstep = startStep;
+  Tone.Transport.scheduleRepeat(time => {
+    if(gstep >= endStep) gstep = startStep;   // loop the section
+    fireStep(stepActions(gstep), time);
+    gstep++;
+  }, '16n');
+  Tone.Transport.start('+0.1');
+  S.playing = true;
+  const btn = document.getElementById('play-btn-big');
+  btn.textContent = '⏹ Stop practice'; btn.classList.add('playing');
+  document.getElementById('play-status').textContent = '🔂 Practising the chorus — tap ⏹ to stop 练习副歌';
+  const target = karaokeTarget || document.getElementById('karaoke-text');
+  target.innerHTML = '<span style="font-size:48px">🔂</span><br><span style="color:#c05c1a;font-weight:800;font-size:24px">Chorus · 副歌</span>';
+}
 
 async function playSong(){
   await Tone.start();
   stopPreview();
-  const mood = S.mood, rhy = S.rhythm;
-  makeChordSyn(S.instrument);
-  makeBassSyn();
+  buildPlan();
+  makeChordSyn(S.instrument); makeBassSyn(); makeMelSyn();
 
-  Tone.Transport.bpm.value = mood.bpm;
+  const bpm = Math.round(S.mood.bpm * S.tempoMul);
+  Tone.Transport.bpm.value = bpm;
   gstep = 0;
+  const totalSteps = totalBars * 16;
+  const secPerBar = (60 / bpm) * 4;
+  const totalSec = Math.round(totalBars * secPerBar);
 
   Tone.Transport.scheduleRepeat(time => {
-    const ds = gstep % 16;
-    const ci = Math.floor(gstep / 16) % mood.degs.length;
-    const deg = mood.degs[ci];
-
-    if(rhy.kick[ds])  kickS.triggerAttackRelease('C1','16n',time);
-    if(rhy.snare[ds]) snareS.triggerAttackRelease('8n',time);
-    if(rhy.hihat[ds]) hihatS.triggerAttackRelease('C5','32n',time);
-
-    if(ds === 0){
-      const notes = buildChord(mood.key, mood.scale, deg, 4, !!mood.use7);
-      try{ chordSyn.releaseAll(time); chordSyn.triggerAttackRelease(notes,'2n',time+.01); }catch(e){}
-      const bn = rootOfChord(mood.key, mood.scale, deg, 2);
-      try{ bassSyn.triggerAttackRelease(bn,'4n',time+.01); }catch(e){}
-    }
+    if(gstep >= totalSteps) return;
+    fireStep(stepActions(gstep), time);
     gstep++;
   }, '16n');
 
@@ -452,84 +726,651 @@ async function playSong(){
   S.playing = true;
 
   const btn = document.getElementById('play-btn-big');
-  btn.textContent = '⏸ Playing...';
-  btn.classList.add('playing');
+  btn.textContent = '⏸ Playing...'; btn.classList.add('playing');
 
-  // Karaoke
+  const target = karaokeTarget || document.getElementById('karaoke-text');
   if(S.words.trim()){
-    startKaraoke(S.words.trim(), 30000);
+    startKaraoke(S.words.trim(), totalSec * 1000, target);
   } else {
-    document.getElementById('karaoke-text').innerHTML =
-      `<span style="font-size:60px">${mood.emoji}</span><br>
-       <span style="color:#c05c1a;font-size:25px;font-weight:800">${mood.en}</span>
-       <span style="color:#7a5a3a;font-size:20px"> · ${mood.cn}</span>`;
+    target.innerHTML = `<span style="font-size:60px">${S.mood.emoji}</span><br>
+      <span style="color:#c05c1a;font-size:25px;font-weight:800">${S.mood.en}</span>
+      <span style="color:#7a5a3a;font-size:20px"> · ${S.mood.cn}</span>`;
   }
 
-  // Countdown
-  let secs = 30;
+  playStart = performance.now();
   const statusEl = document.getElementById('play-status');
-  statusEl.textContent = '🎵 30s remaining...';
-  countdown = setInterval(()=>{
-    secs--;
-    if(secs > 0) statusEl.textContent = `🎵 ${secs}s remaining...`;
-    else clearInterval(countdown);
-  }, 1000);
+  const tick = ()=>{
+    const el = (performance.now() - playStart) / 1000;
+    const rem = Math.max(0, Math.ceil(totalSec - el));
+    const bar = Math.min(totalBars - 1, Math.floor(el / secPerBar));
+    const lab = SEC_LABEL[barPlan[bar]] || {en:'',cn:''};
+    statusEl.textContent = `🎵 ${lab.en} · ${lab.cn}   ·   ${fmtTime(rem)} left`;
+  };
+  tick(); countdown = setInterval(tick, 200);
+  songTimer = setTimeout(finishSong, totalSec * 1000 + 250);
 
-  // Auto-stop at 30s
-  songTimer = setTimeout(()=>{
-    clearInterval(countdown);
-    stopSong();
-    statusEl.textContent = '🎉 That\'s your song! 你的歌做好了！';
-    btn.textContent = '▶ Play Again';
-  }, 30000);
-
-  if(!S.played){ S.played=true; launchConfetti(); }
+  if(!S.played){ S.played = true; launchConfetti(); }
 }
-
-function toggleSong(){
-  if(S.playing) stopSong();
-  else playSong();
-}
+function toggleSong(){ if(S.playing) stopSong(); else playSong(); }
 
 // ═══════════════════════════════════════════════════════
 // KARAOKE
 // ═══════════════════════════════════════════════════════
-function startKaraoke(text, totalMs){
+function esc(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function startKaraoke(text, totalMs, target){
   const words = text.split(/\s+/).filter(Boolean);
-  if(!words.length) return;
-  const box = document.getElementById('karaoke-text');
-  box.innerHTML = words.map((w,i)=>`<span class="kw" id="kw${i}">${w}</span>`).join(' ');
+  if(!words.length){ target.innerHTML=''; return; }
+  target.innerHTML = words.map(w=>`<span class="kw">${esc(w)}</span>`).join(' ');
+  const spans = [...target.querySelectorAll('.kw')];
   const each = totalMs / words.length;
-  words.forEach((_,i)=>{
+  const onStage = target.id === 'stage-lyrics';
+  spans.forEach((sp,i)=>{
     kTimers.push(setTimeout(()=>{
-      document.querySelectorAll('.kw').forEach(e=>e.classList.remove('hi'));
-      document.getElementById(`kw${i}`)?.classList.add('hi');
-    }, i * each));
+      spans.forEach(s=>s.classList.remove('hi'));
+      sp.classList.add('hi');
+      if(onStage){ try{ sp.scrollIntoView({block:'center'}); }catch(e){} }
+    }, i*each));
   });
 }
 
 // ═══════════════════════════════════════════════════════
-// SAVE
+// REHEARSE CONTROLS (tempo + key)
 // ═══════════════════════════════════════════════════════
-function saveSong(){
-  const mood = S.mood;
-  const words = S.words || '(No words added)';
-  const txt = `🎵 My Song — made with Song Maker
-──────────────────────
-Mood: ${mood.emoji} ${mood.en} (${mood.cn})
-Rhythm: ${S.rhythm.en} (${S.rhythm.cn})
-Sound: ${S.instrument.en} (${S.instrument.cn})
+function toggleTempo(){
+  S.tempoMul = (S.tempoMul === 1) ? 0.72 : 1;
+  const b = document.getElementById('tempo-btn');
+  if(S.tempoMul === 1){ b.classList.remove('on'); b.innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>'; }
+  else { b.classList.add('on'); b.innerHTML='🐇 Normal<br><span style="font-size:11px">正常</span>'; }
+  if(S.playing) replaySong();
+}
+function changeKey(d){
+  S.transpose = Math.max(-7, Math.min(7, S.transpose + d));
+  toast(`Key: ${S.transpose>0?'+':''}${S.transpose}  音高`);
+  if(S.playing) replaySong();
+}
 
-Words:
+// ── Mic pitch detection (autocorrelation) for "Find my key" ──
+function autoCorrelate(buf, sampleRate){
+  let size = buf.length, rms = 0;
+  for(let i=0;i<size;i++){ rms += buf[i]*buf[i]; }
+  rms = Math.sqrt(rms/size);
+  if(rms < 0.01) return -1;               // too quiet
+  let r1=0, r2=size-1, thres=0.2;
+  for(let i=0;i<size/2;i++){ if(Math.abs(buf[i])<thres){ r1=i; break; } }
+  for(let i=1;i<size/2;i++){ if(Math.abs(buf[size-i])<thres){ r2=size-i; break; } }
+  buf = buf.slice(r1, r2); size = buf.length;
+  const c = new Array(size).fill(0);
+  for(let i=0;i<size;i++) for(let j=0;j<size-i;j++) c[i] += buf[j]*buf[j+i];
+  let d=0; while(c[d]>c[d+1]) d++;
+  let maxval=-1, maxpos=-1;
+  for(let i=d;i<size;i++){ if(c[i]>maxval){ maxval=c[i]; maxpos=i; } }
+  let T0 = maxpos;
+  if(T0<=0) return -1;
+  return sampleRate / T0;
+}
+async function findMyKey(){
+  const btn = document.getElementById('key-btn');
+  if(!navigator.mediaDevices?.getUserMedia){ toast('Microphone not available 没有麦克风'); return; }
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ toast('Please allow the microphone 请允许麦克风'); return; }
+  btn.disabled = true;
+  toast('Hum a comfortable note… 哼一个舒服的音…');
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser(); an.fftSize = 2048;
+    src.connect(an);
+    const buf = new Float32Array(an.fftSize);
+    const freqs = [];
+    const t0 = performance.now();
+    await new Promise(res=>{
+      const loop = ()=>{
+        an.getFloatTimeDomainData(buf);
+        const f = autoCorrelate(buf, ctx.sampleRate);
+        if(f>60 && f<800) freqs.push(f);
+        if(performance.now()-t0 < 2500) requestAnimationFrame(loop); else res();
+      };
+      loop();
+    });
+    stream.getTracks().forEach(t=>t.stop()); ctx.close();
+    if(freqs.length < 8){ toast('Did not hear you — try again 再试一次'); btn.disabled=false; return; }
+    freqs.sort((a,b)=>a-b);
+    const med = freqs[Math.floor(freqs.length/2)];
+    const midi = Math.round(69 + 12*Math.log2(med/440));
+    const detectedPc = ((midi % 12) + 12) % 12;
+    const tonicPc = NOTES.indexOf(S.mood.key);
+    let t = ((detectedPc - tonicPc) % 12 + 12) % 12;
+    if(t > 6) t -= 12;                        // nearest within ±6
+    S.transpose = t;
+    toast(`🎤 Tuned to your voice! 已配合你的声音 (${t>0?'+':''}${t})`);
+    if(S.playing) replaySong();
+  }catch(e){
+    toast('Could not set key 找音高失败');
+  }finally{ btn.disabled = false; }
+}
+
+// ═══════════════════════════════════════════════════════
+// LYRICS HELPER (client-side)
+// ═══════════════════════════════════════════════════════
+function helpWrite(){
+  const m = S.mood || MOODS[0];
+  const bank = LYRICS[m.id] || LYRICS.happy;
+  const typed = document.getElementById('words-area').value.trim();
+  const topic = typed ? typed.replace(/\s+/g,' ').split(/[.!?\n]/)[0].trim().slice(0,40) || bank.topic : bank.topic;
+  const fill = arr => arr.map(l=>l.replace(/\{topic\}/g, topic)).join('\n');
+  const text =
+`(Verse 1)
+${fill(bank.verse)}
+
+(Chorus)
+${fill(bank.chorus)}
+
+(Verse 2)
+${fill(bank.verse)}
+
+(Chorus)
+${fill(bank.chorus)}`;
+  document.getElementById('words-area').value = text;
+  toast('✨ Lyrics ready — edit anything you like! 可以修改');
+}
+function readWords(){
+  const t = document.getElementById('words-area').value.trim();
+  if(!t){ toast('Nothing to read yet 还没有内容'); return; }
+  speak(t);
+}
+function speak(text){
+  if(!('speechSynthesis' in window)){ toast('Read-aloud not available 朗读不可用'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.92; u.pitch = 1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════
+// STAGE MODE
+// ═══════════════════════════════════════════════════════
+let stageCountIv = null, wakeLock = null, stageFont = 42;
+async function requestWake(){ try{ wakeLock = await navigator.wakeLock?.request('screen'); }catch(e){} }
+function releaseWake(){ try{ wakeLock?.release(); }catch(e){} wakeLock=null; }
+function stageSize(d){
+  stageFont = Math.max(24, Math.min(110, stageFont + d));
+  document.getElementById('stage-lyrics').style.fontSize = stageFont + 'px';
+}
+
+async function enterStage(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  stopSong();
+  try{ await Tone.start(); }catch(e){}
+  const stage = document.getElementById('stage');
+  stage.hidden = false;
+  document.getElementById('stage-hint').textContent = 'Tap anywhere to stop · 点击停止';
+  document.getElementById('stage-lyrics').style.fontSize = stageFont + 'px';
+  requestWake();
+  try{ stage.requestFullscreen?.(); }catch(e){}
+  const cnt = document.getElementById('stage-count');
+  const lyr = document.getElementById('stage-lyrics');
+  lyr.innerHTML = ''; cnt.style.display = '';
+  let n = 3; cnt.textContent = n; chime('C6');                 // audible count-in
+  stageCountIv = setInterval(()=>{
+    n--;
+    if(n > 0){ cnt.textContent = n; chime('C6'); }
+    else { clearInterval(stageCountIv); cnt.style.display='none'; chime('G6'); karaokeTarget = lyr; playSong(); }
+  }, 850);
+}
+function stageStop(){
+  clearInterval(stageCountIv);
+  stopSong();
+  releaseWake();
+  karaokeTarget = document.getElementById('karaoke-text');
+  document.getElementById('stage').hidden = true;
+  try{ if(document.fullscreenElement) document.exitFullscreen?.(); }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════
+// LIVE JAM — a 3×3 DJ pad with switchable banks
+//   Banks: 🎹 Chords (play chords) · 🎵 Parts (launch sections)
+//          🎶 Feel (swap progression) · 🥁 Drums (finger-drum + patterns)
+// ═══════════════════════════════════════════════════════
+// Progression presets (scale-degree patterns; key-independent). degs:null = the mood's own.
+const PROGRESSIONS = [
+  { id:'orig',  en:'Original', cn:'原版', degs:null },
+  { id:'bright',en:'Bright',   cn:'明亮', degs:[0,3,4,0] },           // I–IV–V–I
+  { id:'warm',  en:'Warm',     cn:'温暖', degs:[0,5,3,4] },           // I–vi–IV–V
+  { id:'dreamy',en:'Dreamy',   cn:'梦幻', degs:[0,5,1,4], use7:true },// I–vi–ii–V
+  { id:'rise',  en:'Sing-along',cn:'合唱',degs:[0,4,5,3] },           // I–V–vi–IV
+  { id:'folk',  en:'Folk',     cn:'民谣', degs:[0,3,0,4] },           // I–IV–I–V
+  { id:'sweet', en:'Wistful',  cn:'甜美', degs:[5,3,0,4] },           // vi–IV–I–V
+  { id:'epic',  en:'Epic',     cn:'壮丽', degs:[0,5,2,4] },           // I–vi–iii–V
+  { id:'anthem',en:'Anthem',   cn:'颂歌', degs:[3,4,5,0] },           // IV–V–vi–I
+];
+// Chord pads (3×3) mapped to scale degrees, with Roman labels.
+const CHORDPADS = [
+  {deg:0,roman:'I'},  {deg:3,roman:'IV'}, {deg:4,roman:'V'},
+  {deg:5,roman:'vi'}, {deg:1,roman:'ii'}, {deg:2,roman:'iii'},
+  {deg:4,roman:'V7',add7:true}, {deg:0,roman:'I+',oct:5}, {deg:6,roman:'vii'},
+];
+
+let live = { on:false, bank:'chords', section:'chorus', feel:null, qSection:null, qFeel:undefined, drums:true, progOverlay:false };
+let liveBar = 0;
+
+// Number-pad mapping: keys mirror the visual 3×3 grid (7-8-9 top … 1-2-3 bottom)
+const KEYPAD_DIGITS = ['7','8','9','4','5','6','1','2','3'];
+const KEY_TO_PAD = { '7':0,'8':1,'9':2,'4':3,'5':4,'6':5,'1':6,'2':7,'3':8 };
+
+function chordQuality(scaleName, deg){
+  const sc = SCALES[scaleName];
+  const third = ((sc[(deg+2)%7] - sc[deg]) % 12 + 12) % 12;
+  const fifth = ((sc[(deg+4)%7] - sc[deg]) % 12 + 12) % 12;
+  if(fifth === 6) return 'dim';
+  return third === 3 ? 'm' : '';
+}
+function chordName(deg){
+  const sc = SCALES[S.mood.scale];
+  const idx = ((NOTES.indexOf(S.mood.key) + sc[deg] + (S.transpose||0)) % 12 + 12) % 12;
+  const q = chordQuality(S.mood.scale, deg);
+  return NOTES[idx] + (q === 'm' ? 'm' : q === 'dim' ? '°' : '');
+}
+
+// What each pad of the active bank does (data-driven; also used by tests).
+function bankPads(){
+  switch(live.bank){
+    case 'chords':
+      return CHORDPADS.map(p => ({ cls:'chord', big:chordName(p.deg), label:p.roman, sub:'', kind:'chord', data:p }));
+    case 'sections':
+      return [
+        {cls:'sec',emoji:'🎬',label:'Intro',sub:'前奏',kind:'section',data:'intro'},
+        {cls:'sec',emoji:'🎵',label:'Verse',sub:'主歌',kind:'section',data:'verse'},
+        {cls:'sec',emoji:'🎤',label:'Chorus',sub:'副歌',kind:'section',data:'chorus'},
+        {cls:'sec',emoji:'🌉',label:'Bridge',sub:'桥段',kind:'section',data:'bridge'},
+        {cls:'sec',emoji:'🏁',label:'Outro',sub:'尾奏',kind:'section',data:'outro'},
+        {cls:'ctrl',emoji:'🤫',label:'Soft',sub:'轻',kind:'soft'},
+        {cls:'ctrl',emoji:'🥁',label:'Drums',sub:'鼓',kind:'drums'},
+        {cls:'ctrl',emoji:'🎲',label:'Surprise',sub:'随机',kind:'surprise'},
+        {cls:'ctrl',emoji:'▶',label:'Start',sub:'开始',kind:'start'},
+      ];
+    case 'feel':
+      // each of the 9 pads = a different chord progression
+      return PROGRESSIONS.map(p => ({cls:'feel',emoji:'🎶',label:p.en,sub:p.cn,kind:'feel',data:p}));
+    case 'drums':
+      return [
+        {cls:'drum',emoji:'🦶',label:'Kick',sub:'低鼓',kind:'hit',data:'kick'},
+        {cls:'drum',emoji:'🥁',label:'Snare',sub:'军鼓',kind:'hit',data:'snare'},
+        {cls:'drum',emoji:'🎩',label:'Hi-hat',sub:'踩镲',kind:'hit',data:'hihat'},
+        {cls:'drum',emoji:'👏',label:'Clap',sub:'拍手',kind:'hit',data:'clap'},
+        {cls:'drum',emoji:'✨',label:'Fill',sub:'过门',kind:'hit',data:'fill'},
+        {cls:'ctrl',emoji:'🔊',label:'On/Off',sub:'开关',kind:'drums'},
+        {cls:'sec',emoji:'🎵',label:'Gentle',sub:'轻柔',kind:'pattern',data:0},
+        {cls:'sec',emoji:'🎶',label:'Steady',sub:'平稳',kind:'pattern',data:1},
+        {cls:'sec',emoji:'🥁',label:'Upbeat',sub:'活泼',kind:'pattern',data:2},
+      ];
+  }
+  return [];
+}
+
+function renderPads(){
+  const grid = document.getElementById('jam-pad');
+  grid.innerHTML = bankPads().map((d,i)=>{
+    const top = (d.big!==undefined) ? `<span class="pe" style="font-size:30px">${d.big}</span>` : `<span class="pe">${d.emoji}</span>`;
+    const pp = (live.progOverlay && PROGRESSIONS[i]) ? `<span class="pp">🎶 ${PROGRESSIONS[i].en}</span>` : '';
+    return `<button class="pad ${d.cls}" data-i="${i}" onclick="pad(${i})"><span class="pk">${KEYPAD_DIGITS[i]}</span>${pp}${top}<span class="pl">${d.label}</span><span class="pc">${d.sub||''}</span></button>`;
+  }).join('');
+  document.querySelectorAll('#jam-banks button').forEach(b=>b.classList.toggle('active', b.dataset.bank===live.bank));
+  const ob = document.getElementById('prog-overlay'); if(ob) ob.classList.toggle('active', live.progOverlay);
+  refreshPads();
+}
+function refreshPads(){
+  const defs = bankPads();
+  document.querySelectorAll('#jam-pad .pad').forEach((b,i)=>{
+    const d = defs[i]; if(!d) return;
+    let active = false;
+    if(d.kind==='section')      active = live.qSection ? (live.qSection===d.data) : (live.section===d.data);
+    else if(d.kind==='feel'){   const sel = live.qFeel!==undefined ? (live.qFeel?live.qFeel.id:'orig') : (live.feel?live.feel.id:'orig'); active = sel===d.data.id; }
+    else if(d.kind==='drums')   active = live.drums;
+    else if(d.kind==='pattern') active = S.rhythm===RHYTHMS[d.data];
+    else if(d.kind==='start')   active = live.on;
+    b.classList.toggle('active', active);
+    b.classList.toggle('queued', d.kind==='section' && live.qSection===d.data);
+    if(d.kind==='start'){
+      b.querySelector('.pe').textContent = live.on?'⏸':'▶';
+      b.querySelector('.pl').textContent = live.on?'Stop':'Start';
+      b.querySelector('.pc').textContent = live.on?'停止':'开始';
+    }
+  });
+  const now = document.getElementById('jam-now');
+  if(now){
+    const s = SEC_LABEL[live.section] || {en:'',cn:''};
+    const f = live.feel ? ` · ${live.feel.en}` : '';
+    now.textContent = `${live.on?'▶ playing':'❚❚ ready'} — ${s.en} · ${s.cn}${f}${live.drums?'':' · drums off'}`;
+  }
+}
+
+// Per-step actions for the live loop (uses live.section / live.feel / live.drums)
+function liveStepActions(ds){
+  const arr = ARR[live.section] || ARR.chorus;
+  const degs = live.feel ? live.feel.degs : S.mood.degs;
+  const use7 = live.feel ? !!live.feel.use7 : !!S.mood.use7;
+  const deg = degs[((liveBar % degs.length) + degs.length) % degs.length];
+  const rhy = S.rhythm || { kick:[], snare:[], hihat:[], clap:[] };
+  const a = { chord:null, bass:null, kick:false, snare:false, hihat:false, clap:false, melody:null, chordVel:arr.chordVel };
+  if(live.drums){
+    if(arr.drums==='full'){ a.kick=!!rhy.kick[ds]; a.snare=!!rhy.snare[ds]; a.hihat=!!rhy.hihat[ds]; a.clap=!!rhy.clap[ds]; }
+    else if(arr.drums==='light'){ a.kick=!!rhy.kick[ds]; a.hihat=!!rhy.hihat[ds]; }
+  }
+  if(ds===0){
+    a.chord = buildChord(S.mood.key, S.mood.scale, deg, 4, use7);
+    if(arr.bass) a.bass = rootOfChord(S.mood.key, S.mood.scale, deg, 2);
+  }
+  if(arr.melody && ds%4===0) a.melody = melodyNote(S.mood.key, S.mood.scale, deg, ds/4);
+  return a;
+}
+function jamTick(time){
+  const ds = gstep % 16;
+  if(ds === 0){
+    if(live.qSection){ live.section = live.qSection; live.qSection = null; }
+    if(live.qFeel !== undefined){ live.feel = live.qFeel; live.qFeel = undefined; }
+    liveBar++;
+    refreshPads();
+  }
+  fireStep(liveStepActions(ds), time);
+  gstep++;
+}
+function ensureSynths(){ if(!chordSyn) makeChordSyn(S.instrument); if(!bassSyn) makeBassSyn(); if(!melSyn) makeMelSyn(); }
+async function jamStart(){
+  if(!S.mood || !S.rhythm){ toast('Make a song first 先做一首歌'); return; }
+  try{ await Tone.start(); }catch(e){}
+  stopSong(); stopPreview(); ensureSynths();
+  Tone.Transport.bpm.value = Math.round(S.mood.bpm * S.tempoMul);
+  gstep = 0; liveBar = -1; live.on = true;
+  Tone.Transport.scheduleRepeat(jamTick, '16n');
+  Tone.Transport.start('+0.1');
+  refreshPads();
+}
+function jamStop(){
+  live.on = false;
+  Tone.Transport.stop(); Tone.Transport.cancel();
+  try{ chordSyn?.releaseAll(); }catch(e){}
+  refreshPads();
+}
+function jamToggle(){ if(live.on) jamStop(); else jamStart(); }
+function jamSurprise(){
+  live.qSection = pick(['verse','chorus','bridge']);
+  live.qFeel = pick(PROGRESSIONS.filter(p=>p.degs));
+  if(!live.on) jamStart();
+  refreshPads();
+}
+
+function padChord(p){
+  ensureSynths();
+  const notes = buildChord(S.mood.key, S.mood.scale, p.deg, p.oct||4, !!p.add7);
+  try{ chordSyn.triggerAttackRelease(notes, '2n', undefined, 0.9); }catch(e){}
+  try{ bassSyn.triggerAttackRelease(rootOfChord(S.mood.key, S.mood.scale, p.deg, 2), '4n'); }catch(e){}
+}
+function padDrum(kind){
+  ensureSynths();
+  try{
+    if(kind==='kick')       kickS.triggerAttackRelease('C1','8n');
+    else if(kind==='snare') snareS.triggerAttackRelease('8n');
+    else if(kind==='hihat') hihatS.triggerAttackRelease('C5','16n');
+    else if(kind==='clap')  snareS.triggerAttackRelease('16n');
+    else if(kind==='fill'){ const n = Tone.now(); for(let k=0;k<4;k++) snareS.triggerAttackRelease('16n', n + k*0.09); }
+  }catch(e){}
+}
+
+async function pad(i){
+  try{ await Tone.start(); }catch(e){}
+  ensureSynths();
+  const d = bankPads()[i];
+  if(!d) return;
+  switch(d.kind){
+    case 'chord':   padChord(d.data); break;
+    case 'hit':     padDrum(d.data); break;
+    case 'pattern': S.rhythm = RHYTHMS[d.data]; break;
+    case 'section': live.qSection = d.data; if(!live.on) await jamStart(); break;
+    case 'feel':    live.qFeel = d.data.degs ? d.data : null; if(!live.on) await jamStart(); break;
+    case 'soft':    live.qSection = 'verse'; live.drums = false; if(!live.on) await jamStart(); break;
+    case 'drums':   live.drums = !live.drums; break;
+    case 'surprise':jamSurprise(); break;
+    case 'start':   jamToggle(); break;
+  }
+  // Option: each pad ALSO swaps the chord progression (pad position → progression)
+  if(live.progOverlay && d.kind!=='feel'){
+    const p = PROGRESSIONS[i];
+    live.qFeel = (p && p.degs) ? p : null;
+    if(!live.on) await jamStart();
+  }
+  const el = document.querySelectorAll('#jam-pad .pad')[i];
+  if(el && (d.kind==='chord' || d.kind==='hit')){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 150); }
+  refreshPads();
+}
+function setBank(b){ live.bank = b; renderPads(); }
+function toggleProgOverlay(){
+  live.progOverlay = !live.progOverlay;
+  renderPads();
+  toast(live.progOverlay ? '🎶 Each pad now also changes the chords 叠加和声' : 'Pads back to normal 已关闭');
+}
+function openJam(){
+  if(!S.mood || !S.rhythm){ toast('Make a song first 先做一首歌'); return; }
+  stopSong();
+  live = { on:false, bank:'chords', section:'chorus', feel:null, qSection:null, qFeel:undefined, drums:true, progOverlay:false };
+  liveBar = 0;
+  document.getElementById('jam').hidden = false;
+  renderPads();
+  requestWake();
+}
+function closeJam(){ jamStop(); releaseWake(); document.getElementById('jam').hidden = true; }
+
+// ═══════════════════════════════════════════════════════
+// CHANGE THE CHORDS — pick the progression for the real song
+// ═══════════════════════════════════════════════════════
+function progChords(p){
+  const degs = p.degs || S.mood.degs;
+  return degs.map(d => chordName(d)).join(' · ');
+}
+function setProgressionById(id){
+  const p = PROGRESSIONS.find(x => x.id === id);
+  S.progression = (p && p.degs) ? p : null;     // 'orig'/null → use the mood's own chords
+  persistDraft();
+  if(S.playing) replaySong();
+}
+function toggleChorusLift(){
+  S.chorusLift = !S.chorusLift;
+  const b = document.getElementById('lift-toggle');
+  if(b){ b.classList.toggle('on', S.chorusLift); b.textContent = S.chorusLift ? 'On 开' : 'Off 关'; }
+  persistDraft();
+  if(S.playing) replaySong();
+  toast(S.chorusLift ? '⬆ Chorus will lift 副歌升级' : 'Chorus lift off 已关闭');
+}
+async function previewProgression(p){
+  try{ await Tone.start(); }catch(e){}
+  stopPreview(); ensureSynths();
+  const degs = p.degs || S.mood.degs;
+  const use7 = p.degs ? !!p.use7 : !!S.mood.use7;
+  const now = Tone.now();
+  degs.forEach((d,i)=>{
+    const notes = buildChord(S.mood.key, S.mood.scale, d, 4, use7);
+    try{ chordSyn.triggerAttackRelease(notes, '2n', now + .05 + i*0.62, 0.9); }catch(e){}
+  });
+}
+function openChords(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  const list = document.getElementById('chords-list');
+  list.innerHTML = '';
+  PROGRESSIONS.forEach(p=>{
+    const sel = p.degs ? (S.progression && S.progression.id === p.id) : !S.progression;
+    const row = document.createElement('div');
+    row.className = 'prog-item' + (sel ? ' sel' : '');
+    row.dataset.id = p.id;
+    row.innerHTML = `<div class="pn"><div class="t">${p.en} · ${p.cn}</div><div class="c">${progChords(p)}</div></div>`;
+    const prev = document.createElement('button');
+    prev.className = 'prev'; prev.textContent = '▶';
+    prev.onclick = (e)=>{ e.stopPropagation(); previewProgression(p); };
+    row.onclick = ()=>{ setProgressionById(p.id); openChords(); };
+    row.appendChild(prev);
+    list.appendChild(row);
+  });
+  const b = document.getElementById('lift-toggle');
+  b.classList.toggle('on', S.chorusLift);
+  b.textContent = S.chorusLift ? 'On 开' : 'Off 关';
+  document.getElementById('chords').hidden = false;
+}
+function closeChords(){ stopPreview(); document.getElementById('chords').hidden = true; }
+
+// ═══════════════════════════════════════════════════════
+// SAVE — WAV (offline render) + lyric sheet
+// ═══════════════════════════════════════════════════════
+async function saveWav(){
+  const btn = document.getElementById('save-btn');
+  const statusEl = document.getElementById('play-status');
+  if(S.playing) stopSong();
+  btn.disabled = true;
+  statusEl.textContent = '💾 Making your file... 制作中...';
+  try{
+    await Tone.start();
+    buildPlan();
+    const inst = S.instrument, bpm = Math.round(S.mood.bpm * S.tempoMul);
+    const sixteenth = (60/bpm)/4;
+    const totalSteps = totalBars * 16;
+    const dur = totalSteps * sixteenth + 4;
+    const buffer = await Tone.Offline(async () => {
+      const rev = new Tone.Reverb({decay:2,wet:.14,preDelay:.01}); await rev.generate(); rev.toDestination();
+      const dry = new Tone.Gain(1).toDestination();
+      const kick  = new Tone.MembraneSynth({pitchDecay:.05,octaves:7,envelope:{attack:.001,decay:.32,sustain:0,release:.1},volume:-3}).connect(dry);
+      const snare = new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0,release:.07},volume:-9}).connect(dry);
+      const hihat = new Tone.MetalSynth({frequency:400,harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5,envelope:{attack:.001,decay:.06,release:.01},volume:-15}).connect(dry);
+      const chord = new Tone.PolySynth(Tone.Synth,{oscillator:{type:inst.osc},envelope:inst.env,volume:inst.vol}).connect(rev);
+      const bass  = new Tone.MonoSynth({oscillator:{type:'sawtooth'},filter:{Q:1.2,type:'lowpass',rolloff:-24},envelope:{attack:.01,decay:.1,sustain:.8,release:.3},filterEnvelope:{attack:.001,decay:.18,sustain:.4,release:.2,baseFrequency:160,octaves:3.5},volume:-6}).connect(rev);
+      const mel   = new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.01,decay:.25,sustain:.3,release:.4},volume:-11}).connect(rev);
+      for(let g=0; g<totalSteps; g++){
+        const t = g*sixteenth, a = stepActions(g);
+        if(a.kick)  kick.triggerAttackRelease('C1','16n',t);
+        if(a.snare) snare.triggerAttackRelease('8n',t);
+        if(a.hihat) hihat.triggerAttackRelease('C5','32n',t);
+        if(a.clap)  snare.triggerAttackRelease('16n',t);
+        if(a.chord) chord.triggerAttackRelease(a.chord,'2n',t+.01,a.chordVel);
+        if(a.bass)  bass.triggerAttackRelease(a.bass,'4n',t+.01);
+        if(a.melody)mel.triggerAttackRelease(a.melody,'4n',t+.01);
+      }
+    }, dur);
+    const ab = buffer.get ? buffer.get() : buffer;
+    downloadBlob(new Blob([audioBufferToWav(ab)], {type:'audio/wav'}), slug(S.title || S.mood.en)+'.wav');
+    statusEl.textContent = '✅ Saved! Check your downloads. 已保存！';
+  }catch(e){
+    statusEl.textContent = '😟 Could not save. Please try again. 保存失败';
+  }finally{ btn.disabled = false; }
+}
+function saveLyricSheet(){
+  const m = S.mood;
+  if(!m){ toast('Make a song first 先做一首歌'); return; }
+  const words = S.words.trim() || '(No words added · 没有歌词)';
+  const title = S.title.trim() || `${m.en} Song`;
+  const txt =
+`🎵 ${title} — made with SongKaki
+──────────────────────
+Mood 心情:   ${m.emoji} ${m.en} (${m.cn})
+Rhythm 节拍: ${S.rhythm?.en||'-'} (${S.rhythm?.cn||''})
+Sound 声音:  ${S.instrument?.en||'-'} (${S.instrument?.cn||''})
+Shape 长度:  ${S.structure.en} (${S.structure.cn})
+Key 调整:    ${S.transpose>0?'+':''}${S.transpose} semitones
+
+Words 歌词:
 ${words}
 ──────────────────────
 Made with love ❤️`;
-  const blob = new Blob([txt],{type:'text/plain'});
+  downloadBlob(new Blob([txt],{type:'text/plain'}), slug(title)+'-lyrics.txt');
+  toast('📄 Lyric sheet saved 已保存');
+}
+function downloadBlob(blob, name){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url; a.download='my-song.txt'; a.click();
+  a.href = url; a.download = name; a.click();
   URL.revokeObjectURL(url);
 }
+function audioBufferToWav(ab){
+  const numCh = ab.numberOfChannels, sr = ab.sampleRate, len = ab.length;
+  const blockAlign = numCh * 2, dataSize = len * blockAlign;
+  const view = new DataView(new ArrayBuffer(44 + dataSize));
+  const ws = (off,str)=>{ for(let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4, 36+dataSize, true); ws(8,'WAVE');
+  ws(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numCh,true); view.setUint32(24,sr,true);
+  view.setUint32(28,sr*blockAlign,true); view.setUint16(32,blockAlign,true); view.setUint16(34,16,true);
+  ws(36,'data'); view.setUint32(40,dataSize,true);
+  const chans=[]; for(let c=0;c<numCh;c++) chans.push(ab.getChannelData(c));
+  let off=44;
+  for(let i=0;i<len;i++) for(let c=0;c<numCh;c++){
+    let s = Math.max(-1, Math.min(1, chans[c][i]));
+    view.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true); off += 2;
+  }
+  return view.buffer;
+}
+
+// ═══════════════════════════════════════════════════════
+// SONG BOOK (localStorage)
+// ═══════════════════════════════════════════════════════
+const BOOK_KEY = 'songkaki.book';
+function loadBook(){ try{ return JSON.parse(localStorage.getItem(BOOK_KEY)) || []; }catch(e){ return []; } }
+function persistBook(arr){ try{ localStorage.setItem(BOOK_KEY, JSON.stringify(arr)); }catch(e){} }
+function saveToBook(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  const arr = loadBook();
+  const title = (S.title.trim() || S.words.trim().split(/\n/)[0] || `${S.mood.en} song`).slice(0,40);
+  arr.unshift({
+    id: 'sk' + performance.now().toString(36) + Math.floor(performance.now()%1000),
+    title, when: new Date().toLocaleDateString(),
+    mood:S.mood.id, rhythm:S.rhythm?.id, instrument:S.instrument?.id,
+    structure:S.structure.id, words:S.words, transpose:S.transpose, tempoMul:S.tempoMul,
+    progression:S.progression?S.progression.id:null, chorusLift:S.chorusLift?1:0,
+  });
+  persistBook(arr.slice(0,50));
+  toast('⭐ Kept in your song book! 已收藏');
+}
+function applyEntry(e){
+  S.mood = MOODS.find(m=>m.id===e.mood) || MOODS[0];
+  S.rhythm = RHYTHMS.find(r=>r.id===e.rhythm) || RHYTHMS[0];
+  S.instrument = INSTRUMENTS.find(i=>i.id===e.instrument) || INSTRUMENTS[0];
+  S.structure = STRUCTURES.find(s=>s.id===e.structure) || STRUCTURES[1];
+  S.words = e.words || ''; S.transpose = e.transpose||0; S.tempoMul = e.tempoMul||1;
+  S.title = e.title || '';
+  const ep = e.progression ? PROGRESSIONS.find(x=>x.id===e.progression) : null;
+  S.progression = (ep && ep.degs) ? ep : null;
+  S.chorusLift = !!e.chorusLift;
+  document.getElementById('words-area').value = S.words;
+  document.getElementById('title-area').value = S.title;
+  // reflect selections so Back navigation makes sense
+  highlightSelections();
+  ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=false);
+}
+function highlightSelections(){
+  const mark=(sel,id)=>document.querySelectorAll(sel).forEach(b=>b.classList.toggle('selected', b.dataset.id===id));
+  mark('#mood-grid .cbtn', S.mood?.id);
+  mark('#rhythm-grid .cbtn', S.rhythm?.id);
+  mark('#instrument-grid .cbtn', S.instrument?.id);
+  selectStructureCard(S.structure.id);
+}
+function openBook(){
+  const list = document.getElementById('book-list');
+  const arr = loadBook();
+  if(!arr.length){ list.innerHTML = '<div class="empty">No songs yet.<br>还没有收藏的歌。<br>Make one and tap ⭐ Keep it!</div>'; }
+  else {
+    list.innerHTML = '';
+    arr.forEach(e=>{
+      const row = document.createElement('div'); row.className='song-item';
+      const mood = MOODS.find(m=>m.id===e.mood);
+      row.innerHTML = `<div class="nm"><div class="t">${mood?mood.emoji:'🎵'} ${esc(e.title)}</div><div class="s">${esc(e.when||'')}</div></div>`;
+      const play = document.createElement('button'); play.className='play'; play.textContent='▶';
+      play.onclick = ()=>{ applyEntry(e); closeBook(); goToStep(LAST_STEP); };
+      const del = document.createElement('button'); del.className='del'; del.textContent='🗑';
+      del.onclick = ()=>{ const a2=loadBook().filter(x=>x.id!==e.id); persistBook(a2); openBook(); };
+      row.appendChild(play); row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('book').hidden = false;
+}
+function closeBook(){ document.getElementById('book').hidden = true; }
 
 // ═══════════════════════════════════════════════════════
 // CONFETTI
@@ -539,31 +1380,54 @@ function launchConfetti(){
   for(let i=0;i<72;i++){
     const el = document.createElement('div');
     const sz = 8 + Math.random()*10;
-    el.style.cssText = [
-      'position:fixed','pointer-events:none','z-index:9999',
-      `left:${Math.random()*100}%`,'top:-15px',
-      `width:${sz}px`,`height:${sz}px`,
-      `background:${cols[i%cols.length]}`,
-      `border-radius:${Math.random()>.5?'50%':'3px'}`,
+    el.style.cssText = ['position:fixed','pointer-events:none','z-index:9999',
+      `left:${Math.random()*100}%`,'top:-15px',`width:${sz}px`,`height:${sz}px`,
+      `background:${cols[i%cols.length]}`,`border-radius:${Math.random()>.5?'50%':'3px'}`,
       `animation:confFall ${1.5+Math.random()*2.5}s ease-in forwards`,
-      `animation-delay:${Math.random()*.7}s`,
-    ].join(';');
+      `animation-delay:${Math.random()*.7}s`].join(';');
     document.body.appendChild(el);
     setTimeout(()=>el.remove(), 4500);
   }
 }
 
 // ═══════════════════════════════════════════════════════
+// TOAST + TTS
+// ═══════════════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function toggleTTS(){
+  ttsOn = !ttsOn;
+  const b = document.getElementById('tts-toggle');
+  b.classList.toggle('on', ttsOn);
+  b.textContent = ttsOn ? '🔊' : '🔈';
+  if(ttsOn){ toast('Read-aloud on 朗读已开'); speakStepTitle(); }
+  else { try{ speechSynthesis.cancel(); }catch(e){} toast('Read-aloud off 朗读已关'); }
+}
+function speakStepTitle(){
+  if(!ttsOn) return;
+  const h = document.querySelector(`#step-${S.step} .step-title h1`);
+  if(h) speak(h.textContent);
+}
+
+// ═══════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════
+const LAST_STEP = 6;
 function goToStep(n){
   stopPreview();
   document.getElementById(`step-${S.step}`)?.classList.remove('active');
   S.step = n;
   document.getElementById(`step-${n}`)?.classList.add('active');
   updateDots();
-  if(n === 5){
+  if(n === LAST_STEP){
     S.words = document.getElementById('words-area').value;
+    S.title = document.getElementById('title-area').value.trim();
+    karaokeTarget = document.getElementById('karaoke-text');
     document.getElementById('karaoke-text').innerHTML =
       'Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>';
     document.getElementById('play-status').textContent = '';
@@ -571,27 +1435,33 @@ function goToStep(n){
     document.getElementById('play-btn-big').classList.remove('playing');
     S.playing = false; S.played = false;
     stopSong();
+    persistDraft();
   }
+  speakStepTitle();
 }
-function goNext(){ if(S.step < 5) goToStep(S.step + 1); }
+function goNext(){ if(S.step < LAST_STEP) goToStep(S.step + 1); }
 function goBack(){ stopSong(); if(S.step > 1) goToStep(S.step - 1); }
-function skipWords(){ S.words=''; document.getElementById('words-area').value=''; goToStep(5); }
+function skipWords(){ S.words=''; document.getElementById('words-area').value=''; goToStep(LAST_STEP); }
 function tmpl(t){ const ta=document.getElementById('words-area'); ta.value=t; ta.focus(); ta.setSelectionRange(t.length,t.length); }
-
 function restart(){
   stopSong(); stopPreview();
-  S.mood=null; S.rhythm=null; S.instrument=null; S.words=''; S.played=false;
+  S.mood=null; S.rhythm=null; S.instrument=null; S.structure=STRUCTURES[1];
+  S.title=''; S.words=''; S.transpose=0; S.tempoMul=1; S.played=false;
+  S.progression=null; S.chorusLift=false;
   document.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('selected'));
   ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=true);
   document.getElementById('words-area').value='';
+  document.getElementById('title-area').value='';
+  document.getElementById('tempo-btn').classList.remove('on');
+  document.getElementById('tempo-btn').innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>';
+  selectStructureCard(S.structure.id);
   goToStep(1);
 }
-
 function updateDots(){
-  for(let i=1;i<=5;i++){
+  for(let i=1;i<=LAST_STEP;i++){
     const d = document.getElementById(`d${i}`);
     d.classList.remove('active','done');
-    if(i < S.step)       d.classList.add('done');
+    if(i < S.step) d.classList.add('done');
     else if(i === S.step) d.classList.add('active');
   }
 }
@@ -602,62 +1472,181 @@ function updateDots(){
 function renderMoods(){
   const grid = document.getElementById('mood-grid');
   MOODS.forEach(m=>{
-    const b = document.createElement('button');
-    b.className='cbtn';
+    const b = document.createElement('button'); b.className='cbtn'; b.dataset.id=m.id;
     b.innerHTML=`<span class="em">${m.emoji}</span><span class="en">${m.en}</span><span class="cn">${m.cn}</span>`;
     b.onclick = async ()=>{
       await Tone.start(); chime('G5');
       grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
       b.classList.add('selected');
-      S.mood = m;
-      document.getElementById('next-1').disabled = false;
+      S.mood = m; document.getElementById('next-1').disabled = false;
     };
     grid.appendChild(b);
   });
 }
-
 function renderRhythms(){
   const grid = document.getElementById('rhythm-grid');
   RHYTHMS.forEach(r=>{
-    const b = document.createElement('button');
-    b.className='cbtn';
+    const b = document.createElement('button'); b.className='cbtn'; b.dataset.id=r.id;
     b.innerHTML=`<span class="em">${r.emoji}</span><span class="en">${r.en}</span><span class="cn">${r.cn}</span><span class="phint">▶ tap to preview</span>`;
     b.onclick = async ()=>{
       await Tone.start(); chime('A5');
       grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
       b.classList.add('selected');
-      S.rhythm = r;
-      document.getElementById('next-2').disabled = false;
+      S.rhythm = r; document.getElementById('next-2').disabled = false;
       previewRhythm(r);
     };
     grid.appendChild(b);
   });
 }
-
 function renderInstruments(){
   const grid = document.getElementById('instrument-grid');
   INSTRUMENTS.forEach(inst=>{
-    const b = document.createElement('button');
-    b.className='cbtn';
+    const b = document.createElement('button'); b.className='cbtn'; b.dataset.id=inst.id;
     b.innerHTML=`<span class="em">${inst.emoji}</span><span class="en">${inst.en}</span><span class="cn">${inst.cn}</span><span class="phint">▶ tap to preview</span>`;
     b.onclick = async ()=>{
       await Tone.start(); chime('B5');
       grid.querySelectorAll('.cbtn').forEach(x=>x.classList.remove('selected'));
       b.classList.add('selected');
-      S.instrument = inst;
-      document.getElementById('next-3').disabled = false;
+      S.instrument = inst; document.getElementById('next-3').disabled = false;
       previewInstrument(inst);
     };
     grid.appendChild(b);
   });
 }
+function selectStructureCard(id){
+  document.querySelectorAll('#shape-grid .cbtn').forEach(x=>x.classList.toggle('selected', x.dataset.id===id));
+}
+function renderStructures(){
+  const grid = document.getElementById('shape-grid');
+  STRUCTURES.forEach(st=>{
+    const b = document.createElement('button'); b.className='cbtn'; b.dataset.id=st.id;
+    b.innerHTML=`<span class="em">${st.emoji}</span><span class="txt"><span class="en">${st.en} · ${st.cn}</span><span class="phint">${st.desc}</span></span>`;
+    b.onclick = async ()=>{ await Tone.start(); chime('E5'); S.structure = st; selectStructureCard(st.id); };
+    grid.appendChild(b);
+  });
+  selectStructureCard(S.structure.id);
+}
+
+// ═══════════════════════════════════════════════════════
+// SURPRISE ME (one-tap full song)
+// ═══════════════════════════════════════════════════════
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+async function surpriseMe(){
+  try{ await Tone.start(); }catch(e){}
+  S.mood = pick(MOODS); S.rhythm = pick(RHYTHMS); S.instrument = pick(INSTRUMENTS); S.structure = pick(STRUCTURES);
+  S.transpose = 0; S.tempoMul = 1;
+  const bank = LYRICS[S.mood.id] || LYRICS.happy;
+  const fill = a => a.map(l=>l.replace(/\{topic\}/g, bank.topic)).join('\n');
+  S.words = `(Verse 1)\n${fill(bank.verse)}\n\n(Chorus)\n${fill(bank.chorus)}\n\n(Verse 2)\n${fill(bank.verse)}\n\n(Chorus)\n${fill(bank.chorus)}`;
+  S.title = `${S.mood.en} Song`;
+  document.getElementById('words-area').value = S.words;
+  document.getElementById('title-area').value = S.title;
+  ['next-1','next-2','next-3'].forEach(id=>document.getElementById(id).disabled=false);
+  highlightSelections();
+  document.getElementById('tempo-btn').classList.remove('on');
+  document.getElementById('tempo-btn').innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>';
+  toast('🎲 Here is a surprise song! 随机歌曲');
+  goToStep(LAST_STEP);
+}
+
+// ═══════════════════════════════════════════════════════
+// SHARE LINK (whole song encoded in the URL — no backend)
+// ═══════════════════════════════════════════════════════
+function slug(s){ return String(s||'song').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,30) || 'song'; }
+function encodeState(){
+  const o = { t:S.title, m:S.mood&&S.mood.id, r:S.rhythm&&S.rhythm.id, i:S.instrument&&S.instrument.id,
+              s:S.structure.id, w:S.words, tr:S.transpose, tm:S.tempoMul,
+              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0 };
+  try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }catch(e){ return ''; }
+}
+function decodeState(str){
+  try{ return JSON.parse(decodeURIComponent(escape(atob(str)))); }catch(e){ return null; }
+}
+function stateToEntry(st){
+  return { title:st.t, mood:st.m, rhythm:st.r, instrument:st.i, structure:st.s, words:st.w,
+           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl };
+}
+function shareLink(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  const code = encodeState();
+  const url = location.origin + location.pathname + '#song=' + code;
+  const fallback = ()=>{ try{ location.hash = 'song=' + code; }catch(e){} toast('🔗 Link is in the address bar 链接在地址栏'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast('🔗 Link copied — paste to share! 链接已复制'), fallback);
+  } else fallback();
+}
+function tryLoadShare(){
+  const m = (location.hash || '').match(/song=([^&]+)/);
+  if(!m) return false;
+  const st = decodeState(m[1]);
+  if(!st || !st.m) return false;
+  applyEntry(stateToEntry(st));
+  goToStep(LAST_STEP);
+  toast('🎁 A song was shared with you! 收到分享的歌');
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTOSAVE DRAFT + RESUME
+// ═══════════════════════════════════════════════════════
+const DRAFT_KEY = 'songkaki.draft';
+function persistDraft(){
+  if(!S.mood) return;
+  try{ localStorage.setItem(DRAFT_KEY, encodeState()); }catch(e){}
+}
+function getDraft(){ try{ return decodeState(localStorage.getItem(DRAFT_KEY)||''); }catch(e){ return null; } }
+function resumeDraft(){
+  const st = getDraft();
+  if(!st || !st.m){ toast('No saved song yet 没有保存的歌'); return; }
+  applyEntry(stateToEntry(st));
+  goToStep(LAST_STEP);
+}
+function showResume(){
+  const st = getDraft();
+  if(st && st.m) document.getElementById('resume-btn').hidden = false;
+}
+
+// ═══════════════════════════════════════════════════════
+// PRINT lyric sheet (stage-friendly)
+// ═══════════════════════════════════════════════════════
+function printLyricSheet(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  const title = (document.getElementById('title-area').value.trim() || S.title || `${S.mood.en} Song`);
+  const words = (S.words || document.getElementById('words-area').value || '').trim() || '(No words)';
+  let w; try{ w = window.open('', '_blank'); }catch(e){ w = null; }
+  if(!w){ toast('Please allow pop-ups to print 请允许弹窗'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    body{font-family:Georgia,'Songti SC',serif;padding:48px;color:#1a1a1a;line-height:1.9}
+    h1{font-size:40px;text-align:center;margin-bottom:6px}
+    .meta{text-align:center;color:#666;margin-bottom:28px;font-size:18px}
+    pre{font-family:inherit;font-size:26px;white-space:pre-wrap;margin:0}
+    @media print{body{padding:24px}}
+  </style></head><body><h1>${esc(title)}</h1>
+  <div class="meta">${S.mood.emoji} ${S.mood.en} · ${S.rhythm?S.rhythm.en:''} · ${S.instrument?S.instrument.en:''}</div>
+  <pre>${esc(words)}</pre></body></html>`);
+  w.document.close();
+  try{ w.focus(); w.print(); }catch(e){}
+}
 
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
-renderMoods();
-renderRhythms();
-renderInstruments();
+karaokeTarget = document.getElementById('karaoke-text');
+renderMoods(); renderRhythms(); renderInstruments(); renderStructures();
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
+
+// Number keys trigger jam pads (only while the jam pad is open)
+document.addEventListener('keydown', e=>{
+  if(document.getElementById('jam').hidden) return;
+  if(e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  const idx = KEY_TO_PAD[e.key];
+  if(idx === undefined) return;
+  e.preventDefault();
+  pad(idx);
+  const el = document.querySelectorAll('#jam-pad .pad')[idx];
+  if(el){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 150); }
+});
+if(!tryLoadShare()) showResume();
 </script>
 </body>
 </html>

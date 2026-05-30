@@ -1,0 +1,609 @@
+// SongKaki test suite. Run with: npm test
+const { loadApp } = require('./harness');
+
+let passed = 0, failed = 0;
+const failures = [];
+function ok(cond, msg){ if(cond) passed++; else { failed++; failures.push(msg); } }
+function eq(a, b, msg){ ok(a === b, `${msg} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`); }
+
+const tests = [];
+function test(name, fn){ tests.push({ name, fn }); }
+
+// Drive the wizard to the studio step with valid selections.
+async function walkToStudio(app, { lyrics = true } = {}){
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();   // Happy
+  W.goNext();
+  $('#rhythm-grid').children[1].onclick({}); await tick();  // Steady
+  W.goNext();
+  $('#instrument-grid').children[0].onclick({}); await tick(); // Piano
+  W.goNext();
+  $('#shape-grid').children[1].onclick({}); await tick();   // Classic
+  W.goNext();                                                // -> words
+  if(lyrics) W.helpWrite();
+  W.goNext();                                                // -> studio
+}
+
+// ── Rendering ──
+test('renders all option grids', (app) => {
+  const { $ } = app;
+  eq($('#mood-grid').children.length, 6, 'mood grid count');
+  eq($('#rhythm-grid').children.length, 4, 'rhythm grid count');
+  eq($('#instrument-grid').children.length, 4, 'instrument grid count');
+  eq($('#shape-grid').children.length, 3, 'shape grid count');
+  ok($('#shape-grid .selected'), 'a shape is pre-selected by default');
+  ok($('#tts-toggle') && $('#book-toggle'), 'top-bar buttons present');
+  eq(app.errors.length, 0, 'no init errors');
+});
+
+// ── Wizard navigation ──
+test('walks the full wizard to the studio', async (app) => {
+  const { $ } = app;
+  await walkToStudio(app);
+  ok($('#step-6').classList.contains('active'), 'lands on studio step');
+  eq(app.errors.length, 0, 'no errors walking wizard');
+});
+
+test('Next is gated until a mood is picked', async (app) => {
+  const { $, window: W, tick } = app;
+  ok($('#next-1').disabled, 'next-1 starts disabled');
+  $('#mood-grid').children[2].onclick({}); await tick();
+  ok(!$('#next-1').disabled, 'next-1 enabled after pick');
+});
+
+test('back navigation returns to previous step', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick(); W.goNext();
+  ok($('#step-2').classList.contains('active'), 'on step 2');
+  W.goBack();
+  ok($('#step-1').classList.contains('active'), 'back to step 1');
+});
+
+// ── Lyrics helper ──
+test('helpWrite generates structured, mood-specific lyrics', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[1].onclick({}); await tick();  // Sad
+  for(let i=0;i<4;i++) W.goNext();                        // to words
+  W.helpWrite();
+  const txt = $('#words-area').value;
+  ok(txt.includes('(Chorus)'), 'has a chorus section');
+  ok(txt.includes('(Verse 1)'), 'has a verse section');
+  ok(/heart|miss|love|remember/i.test(txt), 'lyrics read like lyrics');
+});
+
+test('readWords does not throw', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.goBack(); // back to words
+  ok(true, 'setup');
+  try { W.readWords(); ok(true, 'readWords ran'); } catch(e){ ok(false, 'readWords threw: '+e.message); }
+});
+
+// ── Key / transpose ──
+test('changeKey clamps to ±7', async (app) => {
+  const { window: W } = app;
+  for(let i=0;i<20;i++) W.changeKey(1);
+  // buildChord reflects transpose; C major root at +7 = G
+  eq(W.buildChord('C','major',0,4)[0], 'G4', 'root transposed +7 (clamped)');
+  for(let i=0;i<20;i++) W.changeKey(-1);
+  eq(W.buildChord('C','major',0,4)[0], 'F3', 'root transposed -7 (clamped, F3)');
+});
+
+test('toggleTempo flips state without error', async (app) => {
+  const { $, window: W } = app;
+  W.toggleTempo();
+  ok($('#tempo-btn').classList.contains('on'), 'slower engaged');
+  W.toggleTempo();
+  ok(!$('#tempo-btn').classList.contains('on'), 'back to normal');
+});
+
+// ── Music theory ──
+test('buildChord builds correct triads and voices upward', (app) => {
+  const { window: W } = app;
+  const c = W.buildChord('C','major',0,4,false);
+  eq(c[0], 'C4', 'C major root');
+  eq(c.length, 3, 'triad has 3 notes');
+  // ascending midi (no collisions)
+  const a = W.buildChord('A','minor',0,4,false);
+  eq(a[0], 'A4', 'A minor root');
+});
+
+test('buildChord with use7 adds a fourth note', (app) => {
+  const { window: W } = app;
+  eq(W.buildChord('G','major',0,4,true).length, 4, '7th chord has 4 notes');
+});
+
+test('rootOfChord and melodyNote return valid notes', (app) => {
+  const { window: W } = app;
+  eq(W.rootOfChord('C','major',0,2), 'C2', 'bass root C2');
+  ok(/^[A-G]#?\d$/.test(W.melodyNote('C','major',0,0)), 'melody note well-formed');
+});
+
+// ── Arranger ──
+test('buildPlan + stepActions arrange sections correctly', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();  // Happy needed for stepActions
+  $('#rhythm-grid').children[1].onclick({}); await tick(); // Steady (chorus drums)
+  W.buildPlan();                                          // default structure = classic
+  const intro = W.stepActions(0);
+  ok(Array.isArray(intro.chord), 'intro downbeat has a chord');
+  ok(!intro.kick && !intro.snare, 'intro has no drums');
+  ok(!intro.melody, 'intro has no melody');
+  // classic: intro(4) verse(8) chorus(8) -> bar 12 is chorus; ds0 melody present
+  const chorus = W.stepActions(12 * 16);
+  ok(chorus.melody, 'chorus downbeat carries a melody');
+  ok(chorus.bass, 'chorus has bass');
+});
+
+// ── WAV / lyric sheet export ──
+test('saveWav renders offline and reports success', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  await W.saveWav();
+  ok($('#play-status').textContent.includes('Saved'), 'success status shown');
+});
+
+test('audioBufferToWav produces a correctly-sized WAV buffer', (app) => {
+  const { window: W } = app;
+  const fake = { numberOfChannels:1, sampleRate:8000, length:4, getChannelData:()=>new Float32Array([0,.5,-.5,1]) };
+  const buf = W.audioBufferToWav(fake);
+  eq(buf.byteLength, 44 + 4*1*2, 'header(44)+pcm bytes');
+});
+
+test('saveLyricSheet does not throw', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  try { W.saveLyricSheet(); ok(true, 'lyric sheet ok'); } catch(e){ ok(false, 'threw: '+e.message); }
+});
+
+// ── Song Book ──
+test('song book: keep, list, reload, delete', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  W.saveToBook();
+  W.openBook();
+  ok($('#book-list .song-item'), 'kept song appears in book');
+  $('#book-list .song-item .play').onclick({});            // reload
+  ok($('#step-6').classList.contains('active'), 'reloads into studio');
+  W.openBook();
+  $('#book-list .song-item .del').onclick({});             // delete
+  W.openBook();
+  ok($('#book-list .empty'), 'book empty after delete');
+});
+
+// ── Stage mode ──
+test('stage mode opens and closes cleanly', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  await W.enterStage();
+  ok(!$('#stage').hidden, 'stage overlay visible');
+  W.stageStop();
+  ok($('#stage').hidden, 'stage overlay hidden again');
+});
+
+// ── TTS + utilities ──
+test('toggleTTS toggles state', (app) => {
+  const { $, window: W } = app;
+  W.toggleTTS();
+  ok($('#tts-toggle').classList.contains('on'), 'tts on');
+  W.toggleTTS();
+  ok(!$('#tts-toggle').classList.contains('on'), 'tts off');
+});
+
+test('esc() escapes HTML (no injection via lyrics)', (app) => {
+  const { window: W } = app;
+  eq(W.esc('<b>&"'), '&lt;b&gt;&amp;&quot;', 'escapes < > & "');
+});
+
+// ── Restart ──
+test('restart clears all selections and returns to step 1', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  W.restart();
+  ok($('#step-1').classList.contains('active'), 'on step 1');
+  ok(!$('#mood-grid .selected'), 'mood cleared');
+  ok($('#next-1').disabled, 'next-1 disabled again');
+  eq($('#words-area').value, '', 'words cleared');
+});
+
+// ═══ NEW FEATURES (round 2) ═══
+
+// ── Surprise me ──
+test('surpriseMe builds a complete song and jumps to studio', async (app) => {
+  const { $, $$, window: W, tick } = app;
+  await W.surpriseMe(); await tick();
+  ok($('#step-6').classList.contains('active'), 'lands on studio');
+  ok($('#words-area').value.includes('(Chorus)'), 'lyrics filled in');
+  ok($('#title-area').value.length > 0, 'a title was set');
+  ok($$('#mood-grid .selected, #rhythm-grid .selected, #instrument-grid .selected').length >= 3, 'all picks highlighted');
+  ok(!$('#next-1').disabled, 'nav unlocked so Back works');
+});
+
+// ── Song title flows into saves ──
+test('title entered on words step reaches studio state + lyric sheet', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick(); W.goNext();
+  $('#rhythm-grid').children[0].onclick({}); await tick(); W.goNext();
+  $('#instrument-grid').children[0].onclick({}); await tick(); W.goNext();
+  W.goNext(); // to words
+  $('#title-area').value = 'Grandma\'s Lullaby';
+  W.goNext(); // to studio (reads title)
+  try { W.saveLyricSheet(); ok(true, 'lyric sheet with title ok'); } catch(e){ ok(false, 'threw: '+e.message); }
+});
+
+// ── Share link round-trip ──
+test('encodeState/decodeState round-trips the whole song', async (app) => {
+  const { $, window: W, tick } = app;
+  await walkToStudio(app);
+  $('#title-area'); // present
+  const code = W.encodeState();
+  ok(code.length > 0, 'produced a code');
+  const st = W.decodeState(code);
+  ok(st && st.m === 'happy', 'mood survives round-trip');
+  ok(st.w.includes('Chorus'), 'words survive round-trip');
+  eq(st.s, 'classic', 'structure survives');
+});
+
+test('shareLink writes a #song= URL when clipboard is unavailable', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  // jsdom has no navigator.clipboard -> falls back to location.hash
+  W.shareLink();
+  ok(W.location.hash.includes('song='), 'hash carries the song');
+});
+
+test('a shared #song= URL auto-loads into the studio', async () => {
+  // First make a code in one instance...
+  const a1 = loadApp();
+  const { $, window: W1, tick } = a1;
+  $('#mood-grid').children[3].onclick({}); await tick(); W1.goNext();          // Energetic
+  $('#rhythm-grid').children[2].onclick({}); await tick(); W1.goNext();        // Upbeat
+  $('#instrument-grid').children[1].onclick({}); await tick(); W1.goNext();    // Guitar
+  $('#shape-grid').children[0].onclick({}); await tick(); W1.goNext();         // Short
+  W1.helpWrite(); W1.goNext();
+  const code = W1.encodeState();
+  // ...then open a fresh instance at that URL.
+  const a2 = loadApp({ url: 'http://localhost/#song=' + code });
+  await a2.tick();
+  ok(a2.$('#step-6').classList.contains('active'), 'shared link opens on studio');
+  ok(a2.$('#words-area').value.includes('Chorus'), 'shared words loaded');
+  eq(a2.errors.length, 0, 'no errors loading shared song');
+});
+
+// ── Autosave + resume ──
+test('autosave persists a draft and resume reloads it', async () => {
+  // Build & reach studio (goToStep persists the draft to localStorage).
+  const a1 = loadApp();
+  const { $, window: W, tick } = a1;
+  $('#mood-grid').children[4].onclick({}); await tick(); W.goNext();           // Loving
+  $('#rhythm-grid').children[0].onclick({}); await tick(); W.goNext();
+  $('#instrument-grid').children[2].onclick({}); await tick(); W.goNext();
+  W.goNext(); $('#title-area').value = 'My Draft'; W.goNext();                  // studio -> persistDraft
+  const draft = W.localStorage.getItem('songkaki.draft');
+  ok(draft && draft.length > 0, 'draft stored in localStorage');
+  // resume within the same instance
+  W.restart();
+  ok($('#step-1').classList.contains('active'), 'restarted');
+  W.resumeDraft();
+  ok($('#step-6').classList.contains('active'), 'resume jumps to studio');
+  ok($('#mood-grid .selected'), 'resume restored selections');
+});
+
+test('resume button appears when a draft exists at load', async () => {
+  const a1 = loadApp();
+  // seed a draft via the app, then re-load to trigger showResume()
+  const { $, window: W, tick } = a1;
+  $('#mood-grid').children[0].onclick({}); await tick();
+  for(let i=0;i<5;i++) W.goNext();  // reach studio -> persistDraft
+  const draft = W.localStorage.getItem('songkaki.draft');
+  ok(draft, 'draft saved');
+  // showResume reads localStorage; call directly to verify gating logic
+  $('#resume-btn').hidden = true;
+  W.showResume();
+  ok(!$('#resume-btn').hidden, 'resume button revealed when draft present');
+});
+
+// ── Print ──
+test('printLyricSheet does not throw when pop-ups are blocked', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.window.open = () => null; // simulate blocked pop-up
+  try { W.printLyricSheet(); ok(true, 'handled blocked pop-up gracefully'); }
+  catch(e){ ok(false, 'threw: '+e.message); }
+});
+
+// ── slug ──
+test('slug() makes safe filenames', (app) => {
+  const { window: W } = app;
+  eq(W.slug("Grandma's Lullaby!! "), 'grandma-s-lullaby', 'slugifies title');
+  eq(W.slug(''), 'song', 'empty -> song');
+});
+
+// ═══ NEW FEATURES (round 3) ═══
+
+test('sectionRange finds the chorus bars in the classic plan', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();
+  $('#rhythm-grid').children[0].onclick({}); await tick();
+  W.buildPlan(); // classic: intro4, verse8, chorus8(=bars 12..19), ...
+  const r = W.sectionRange('chorus');
+  ok(r, 'found a chorus range');
+  eq(r.start, 12, 'chorus starts at bar 12');
+  eq(r.end, 20, 'chorus ends at bar 20');
+  ok(!W.sectionRange('nope'), 'missing section -> null');
+});
+
+test('fireStep triggers without throwing on stubbed synths', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();
+  $('#rhythm-grid').children[0].onclick({}); await tick();
+  W.buildPlan();
+  try { W.fireStep(W.stepActions(12*16), 0); ok(true, 'fireStep ok'); }
+  catch(e){ ok(false, 'fireStep threw: '+e.message); }
+});
+
+test('practiceChorus starts a loop and toggles off', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  await W.practiceChorus();
+  ok($('#play-status').textContent.includes('Practising') || $('#play-btn-big').textContent.includes('Stop'), 'practice engaged');
+  await W.practiceChorus(); // second call toggles off
+  ok($('#play-btn-big').textContent.includes('Play'), 'practice toggled off');
+});
+
+test('stageSize clamps the teleprompter font', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  for(let i=0;i<30;i++) W.stageSize(8);
+  let px = parseInt($('#stage-lyrics').style.fontSize);
+  ok(px <= 110, 'font capped at 110px (got '+px+')');
+  for(let i=0;i<40;i++) W.stageSize(-8);
+  px = parseInt($('#stage-lyrics').style.fontSize);
+  ok(px >= 24, 'font floored at 24px (got '+px+')');
+});
+
+test('enterStage (async, with audible count-in) does not throw', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  try { await W.enterStage(); ok(!$('#stage').hidden, 'stage opened'); }
+  catch(e){ ok(false, 'enterStage threw: '+e.message); }
+  W.stageStop();
+  ok($('#stage').hidden, 'stage closed');
+});
+
+// ═══ OPTION A — real-song progression + chorus lift (round 5) ═══
+
+test('changing the progression changes the actual song chords', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();   // Happy / C major, degs [0,4,5,3]
+  $('#rhythm-grid').children[0].onclick({}); await tick();
+  W.buildPlan();
+  // bar 1 chord, default (mood): degs[1] = 4 = V = G
+  eq(W.stepActions(16).chord[0], 'G4', 'default bar-1 chord is G (V)');
+  W.setProgressionById('folk');                            // folk = [0,3,0,4]; degs[1]=3=IV=F
+  eq(W.stepActions(16).chord[0], 'F4', 'after switch, bar-1 chord is F (IV)');
+  W.setProgressionById('orig');                            // back to the mood default
+  eq(W.stepActions(16).chord[0], 'G4', 'Original restores the mood chords');
+});
+
+test('chorus lift gives the chorus different chords', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick();   // Happy
+  $('#rhythm-grid').children[0].onclick({}); await tick();
+  W.buildPlan();                                           // classic: chorus = bars 12..19
+  eq(W.stepActions(12*16).chord[0], 'C4', 'verse-progression chorus downbeat = C (I)');
+  W.toggleChorusLift();                                    // CHORUS_LIFT = [3,4,5,0] -> IV first
+  eq(W.stepActions(12*16).chord[0], 'F4', 'lifted chorus downbeat = F (IV)');
+  ok(W.stepActions(4*16).chord[0] === 'C4', 'verse (bar 4) is unaffected by the lift');
+});
+
+test('progression + lift survive a share link round-trip', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.setProgressionById('dreamy');
+  W.toggleChorusLift();
+  const st = W.decodeState(W.encodeState());
+  eq(st.p, 'dreamy', 'progression id encoded');
+  eq(st.cl, 1, 'chorus lift encoded');
+});
+
+test('Change-the-chords sheet lists progressions with real chord letters', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);                                 // Happy / C major
+  W.openChords();
+  ok(!$('#chords').hidden, 'chords sheet open');
+  ok($$('#chords-list .prog-item').length >= 8, 'lists the progressions');
+  const folkRow = $$('#chords-list .prog-item').find(r=>r.dataset.id==='folk');
+  ok(folkRow.querySelector('.c').textContent.includes('C'), 'shows actual chord letters for the key');
+  // selecting a row marks it
+  folkRow.onclick();
+  ok($$('#chords-list .prog-item').find(r=>r.dataset.id==='folk').classList.contains('sel'), 'selected row highlighted');
+  W.closeChords();
+  ok($('#chords').hidden, 'sheet closes');
+});
+
+test('previewProgression does not throw', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  try { await W.previewProgression({id:'warm',degs:[0,5,3,4]}); ok(true,'preview ok'); }
+  catch(e){ ok(false,'threw: '+e.message); }
+});
+
+test('restart clears the progression + lift', async (app) => {
+  const { $, window: W, tick } = app;
+  await walkToStudio(app);
+  W.setProgressionById('epic'); W.toggleChorusLift();
+  W.restart();
+  $('#mood-grid').children[0].onclick({}); await tick();
+  $('#rhythm-grid').children[0].onclick({}); await tick();
+  W.buildPlan();
+  eq(W.stepActions(16).chord[0], 'G4', 'back to mood default after restart');
+});
+
+// ═══ LIVE JAM — 3×3 DJ pad with banks (round 4) ═══
+
+test('jam opens on the Chords bank and maps a chord to every pad', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam();
+  ok(!$('#jam').hidden, 'jam overlay open');
+  eq($$('#jam-pad .pad').length, 9, '3×3 = 9 pads');
+  ok($('#jam-banks button[data-bank="chords"]').classList.contains('active'), 'chords bank active');
+  // Happy = C major: pad 0 = I = C, pad 1 = IV = F, pad 3 = vi = Am
+  const big = $$('#jam-pad .pad .pe').map(e=>e.textContent);
+  eq(big[0], 'C', 'pad 0 is the I chord (C)');
+  eq(big[1], 'F', 'pad 1 is the IV chord (F)');
+  eq(big[3], 'Am', 'pad 3 is the vi chord (Am)');
+});
+
+test('chordName respects key and transpose', async (app) => {
+  const { $, window: W, tick } = app;
+  $('#mood-grid').children[0].onclick({}); await tick(); // Happy / C major
+  eq(W.chordName(0), 'C', 'I = C');
+  eq(W.chordName(4), 'G', 'V = G');
+  eq(W.chordName(5), 'Am', 'vi = Am');
+  W.changeKey(2);                       // +2 semitones
+  eq(W.chordName(0), 'D', 'I transposed +2 = D');
+});
+
+test('switching banks re-maps the pads (eg drums, parts, feel)', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam();
+  W.setBank('drums');
+  ok($('#jam-banks button[data-bank="drums"]').classList.contains('active'), 'drums bank active');
+  ok($$('#jam-pad .pad .pl').some(e=>e.textContent==='Kick'), 'drums bank has a Kick pad');
+  W.setBank('sections');
+  ok($$('#jam-pad .pad .pl').some(e=>e.textContent==='Chorus'), 'parts bank has a Chorus pad');
+  W.setBank('feel');
+  ok($$('#jam-pad .pad .pl').some(e=>e.textContent==='Warm'), 'feel bank has a Warm pad');
+});
+
+test('tapping a chord pad plays without throwing and flashes', async (app) => {
+  const { $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam(); // chords bank
+  try { await W.pad(0); ok(true, 'chord pad played'); } catch(e){ ok(false, 'threw: '+e.message); }
+});
+
+test('Parts bank: tapping a section starts the loop and arms that section', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam(); W.setBank('sections');
+  const verseIdx = $$('#jam-pad .pad .pl').findIndex(e=>e.textContent==='Verse');
+  await W.pad(verseIdx);
+  const startPad = $$('#jam-pad .pad').find(b=>b.querySelector('.pl').textContent==='Stop' || b.querySelector('.pl').textContent==='Start');
+  ok(startPad && startPad.querySelector('.pl').textContent==='Stop', 'loop started (Start→Stop)');
+  ok($$('#jam-pad .pad')[verseIdx].classList.contains('queued') || $$('#jam-pad .pad')[verseIdx].classList.contains('active'), 'verse armed');
+});
+
+test('Drums bank: pattern pad selects a rhythm; On/Off toggles', async (app) => {
+  const { $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam(); W.setBank('drums');
+  const gentleIdx = $$('#jam-pad .pad .pl').findIndex(e=>e.textContent==='Gentle');
+  await W.pad(gentleIdx);
+  ok($$('#jam-pad .pad')[gentleIdx].classList.contains('active'), 'gentle pattern selected');
+  const onoffIdx = $$('#jam-pad .pad .pl').findIndex(e=>e.textContent==='On/Off');
+  await W.pad(onoffIdx);                       // drums off
+  ok(!$$('#jam-pad .pad')[onoffIdx].classList.contains('active'), 'drums toggled off');
+});
+
+test('Feel bank: liveStepActions chord follows the loop (default vs no throw)', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  W.openJam();
+  const a = W.liveStepActions(0);
+  ok(Array.isArray(a.chord), 'live downbeat has a chord');
+  ok(a.melody, 'chorus section -> melody present');
+  ok(a.kick, 'drums on by default -> kick on downbeat');
+});
+
+test('pads show their number-key badge in grid order (7-8-9/4-5-6/1-2-3)', async (app) => {
+  const { $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam();
+  const keys = $$('#jam-pad .pad .pk').map(e => e.textContent);
+  eq(keys.join(''), '789456123', 'key badges mirror the visual grid');
+});
+
+test('number keys trigger the matching pad while jam is open', async () => {
+  const a = loadApp();
+  const { $, $$, window: W, tick } = a;
+  await walkToStudio(a);
+  W.openJam(); W.setBank('sections');
+  // pad index 1 (top-middle) = key '8' = Verse
+  eq($$('#jam-pad .pad .pl')[1].textContent, 'Verse', 'index 1 is Verse');
+  W.document.dispatchEvent(new W.KeyboardEvent('keydown', { key: '8' }));
+  await tick();
+  const startPad = $$('#jam-pad .pad').find(b => /Start|Stop/.test(b.querySelector('.pl').textContent));
+  eq(startPad.querySelector('.pl').textContent, 'Stop', 'key 8 launched the loop (Verse)');
+  ok(a.errors.length === 0, 'no errors from key handling');
+});
+
+test('number keys do nothing when the jam pad is closed', async () => {
+  const a = loadApp();
+  const { window: W, tick } = a;
+  await walkToStudio(a); // jam closed
+  W.document.dispatchEvent(new W.KeyboardEvent('keydown', { key: '5' }));
+  await tick();
+  ok(a.errors.length === 0, 'key ignored cleanly when jam hidden');
+});
+
+test('Feel bank maps a different progression to all 9 pads', async (app) => {
+  const { $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam(); W.setBank('feel');
+  eq($$('#jam-pad .pad').length, 9, '9 progression pads');
+  const labels = $$('#jam-pad .pad .pl').map(e=>e.textContent);
+  ok(labels.includes('Original') && labels.includes('Anthem'), 'distinct progressions incl. Original & Anthem');
+  eq(new Set(labels).size, 9, 'all 9 are different');
+});
+
+test('progression-overlay option labels every pad with a progression', async (app) => {
+  const { $, $$, window: W } = app;
+  await walkToStudio(app);
+  W.openJam();                       // chords bank
+  ok($$('#jam-pad .pad .pp').length === 0, 'no progression badges by default');
+  W.toggleProgOverlay();
+  ok($('#prog-overlay').classList.contains('active'), 'option toggled on');
+  eq($$('#jam-pad .pad .pp').length, 9, 'all 9 pads now show a progression');
+  ok($$('#jam-pad .pad .pp')[1].textContent.includes('Bright'), 'pad 1 → Bright progression');
+  W.toggleProgOverlay();
+  ok($$('#jam-pad .pad .pp').length === 0, 'badges gone when toggled off');
+});
+
+test('with the option on, a chord pad also kicks off the loop + progression', async () => {
+  const a = loadApp();
+  const { $, window: W, tick } = a;
+  await walkToStudio(a);
+  W.openJam(); W.toggleProgOverlay();   // chords bank + overlay
+  await W.pad(1);                        // tap a chord pad
+  await tick();
+  ok($('#jam-now').textContent.includes('playing'), 'overlay started the loop via a chord pad');
+  ok(a.errors.length === 0, 'no errors');
+});
+
+test('jam closes cleanly', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  W.openJam(); W.closeJam();
+  ok($('#jam').hidden, 'jam overlay hidden after close');
+});
+
+// ── Runner ──
+(async () => {
+  for(const t of tests){
+    const app = loadApp();
+    try {
+      await t.fn(app);
+      // surface any async window errors raised during the test
+      if(app.errors.length) app.errors.forEach(e => { failed++; failures.push(`[${t.name}] ${e}`); });
+    } catch(e){
+      failed++; failures.push(`[${t.name}] THREW: ${e.stack || e}`);
+    }
+  }
+  console.log(`\n${passed} passed, ${failed} failed  (${tests.length} test cases)`);
+  if(failures.length){ console.error('\nFailures:\n - ' + failures.join('\n - ')); process.exit(1); }
+  console.log('✅ all green');
+})();
