@@ -48,3 +48,38 @@ the offline template if the network or server fails).
 - **Cost/privacy:** each "Help me write" tap is one model call; the theme text the senior types is sent to the
   provider. Consider a rate limit and a privacy note for production.
 - The same Worker can later host a lightweight **room relay** for multi-device co-performance (Performance Mode P8).
+
+---
+
+# "Play Together" room relay (optional — Performance Mode P8)
+
+`room-worker.js` is a separate Worker + Durable Object that fan-outs a host's "start" to everyone in the
+same room code so phones **auto-start in sync**. Without it, "Play Together" still works via shared link +
+synchronized count-in (one shared speaker, or everyone tapping Start on the 3-2-1).
+
+## Deploy
+1. `wrangler.toml`:
+   ```toml
+   name = "songkaki-room"
+   main = "room-worker.js"
+   compatibility_date = "2024-11-01"
+
+   [[durable_objects.bindings]]
+   name = "ROOMS"
+   class_name = "Room"
+
+   [[migrations]]
+   tag = "v1"
+   new_classes = ["Room"]
+   ```
+2. `wrangler deploy` → prints `https://songkaki-room.<you>.workers.dev`.
+3. In `index.html` set `const ROOM_API_URL = 'https://songkaki-room.<you>.workers.dev';` (the client upgrades it to `wss://` automatically).
+
+## How it works
+- Each device opens a WebSocket to `?room=CODE`. The host's **Start** broadcasts `{type:"start"}`; every other
+  device runs the same 3-2-1 count-in and launches Perform mode. Because every device runs the same
+  deterministic arranger at the same tempo, starting together keeps them in sync for the song.
+- This is a **relay**, not a clock-sync; for a casual senior group it's plenty. For tight latency, the
+  research's simplest answer remains **one shared speaker**.
+- CORS/origin and a room TTL/cleanup should be added for production.
+

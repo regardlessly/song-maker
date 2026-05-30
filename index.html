@@ -135,6 +135,20 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 #stage-size button{width:54px;height:54px;border-radius:14px;border:2px solid #ffffff55;background:#ffffff18;
   color:#fff;font-size:20px;font-weight:800;cursor:pointer}
 
+/* ── Play Together ── */
+#group{position:fixed;inset:0;z-index:6400;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
+#group[hidden]{display:none}
+#group .sheet{background:#fffaf4;border-radius:18px;padding:24px;max-width:460px;width:100%;text-align:center}
+#group h2{color:#2a1600;font-size:23px;margin-bottom:12px}
+.glabel{font-size:14px;font-weight:800;color:#7a5a3a;margin-top:6px}
+.rcode{font-size:46px;font-weight:900;color:#c05c1a;letter-spacing:.18em;margin:2px 0 12px}
+#group-copy{width:100%;padding:13px;font-size:16px;font-weight:800;border-radius:13px;border:2.5px solid #c8a06a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
+.ginfo{font-size:14px;color:#7a5a3a;font-weight:600;margin:12px 0;line-height:1.5}
+.groles{font-size:17px;font-weight:800;color:#2a1600;margin:6px 0 4px}
+#group-count{font-size:30px;font-weight:900;color:#388a3c;min-height:40px;margin:8px 0}
+.gstart{width:100%;padding:16px;font-size:19px;font-weight:900;border:none;border-radius:14px;background:#388a3c;color:#fff;cursor:pointer;margin-top:4px}
+.gclose{width:100%;padding:12px;font-size:16px;font-weight:800;border-radius:13px;border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer;margin-top:8px}
+
 /* ── Perform Live ── */
 #perf{position:fixed;inset:0;z-index:5600;background:radial-gradient(circle at 50% 30%,#10324a,#06121c);
   color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
@@ -419,6 +433,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <button class="go" onclick="openPerform()">🎭 Perform LIVE (play along) · 现场表演</button>
     </div>
     <div class="ctrl-row">
+      <button class="go" onclick="openGroup()">👥 Play together · 一起玩</button>
+    </div>
+    <div class="ctrl-row">
       <button class="go" onclick="enterStage()">🎤 Stage 上台</button>
       <button id="save-btn" onclick="saveWav()">💾 Save 保存</button>
       <button onclick="shareLink()">🔗 Share 分享</button>
@@ -444,6 +461,22 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   <div id="stage-count"></div>
   <div id="stage-lyrics"></div>
   <div id="stage-hint">Tap anywhere to stop · 点击停止</div>
+</div>
+
+<!-- Play Together overlay -->
+<div id="group" hidden>
+  <div class="sheet">
+    <h2>👥 Play Together · 一起玩</h2>
+    <div class="glabel">Room code · 房间号</div>
+    <div id="room-code" class="rcode">----</div>
+    <button id="group-copy" onclick="copyJoinLink()">🔗 Copy invite link · 复制邀请链接</button>
+    <div class="ginfo">Send the link to friends' phones — or gather around one phone &amp; speaker.<br>把链接发给朋友的手机，或一起围着一台手机。</div>
+    <div class="glabel">Each person picks a part · 各选一个角色</div>
+    <div class="groles">🥁 Drums · 🎹 Chords · 🎤 Tune</div>
+    <div id="group-count"></div>
+    <button id="group-start" class="gstart" onclick="groupStart()">▶ Start together (3-2-1) · 一起开始</button>
+    <button class="gclose" onclick="closeGroup()">Close 关闭</button>
+  </div>
 </div>
 
 <!-- Perform Live overlay -->
@@ -730,6 +763,9 @@ let ttsOn = false;
 // Set this to your deployed Worker URL (see server/README.md) to enable the AI lyric co-writer.
 // Empty = use the built-in offline template generator. An API key must NEVER go in this file.
 const LYRIC_API_URL = '';
+// Set to your deployed room-relay Worker (server/room-worker.js) for auto-synced multi-device co-play.
+// Empty = "Play Together" still works via shared link + synchronized count-in (one-speaker / start-together).
+const ROOM_API_URL = '';
 
 // ═══════════════════════════════════════════════════════
 // MUSIC THEORY  (transpose applied centrally)
@@ -1529,6 +1565,52 @@ function perfTap(){
 }
 
 // ═══════════════════════════════════════════════════════
+// PLAY TOGETHER (P8) — shared link + synced count-in; optional relay auto-start
+// ═══════════════════════════════════════════════════════
+let roomCode = '', roomSocket = null, roomIsHost = false, groupCountIv = null;
+function genRoomCode(){ const L='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=L[Math.floor(Math.random()*L.length)]; return s; }
+function joinLink(){ return location.origin + location.pathname + '#song=' + encodeState() + '&room=' + roomCode; }
+function openGroup(joinCode){
+  if(!S.mood || !S.rhythm){ toast('Make a song first 先做一首歌'); return; }
+  roomIsHost = !joinCode;
+  roomCode = joinCode || roomCode || genRoomCode();
+  document.getElementById('room-code').textContent = roomCode;
+  document.getElementById('group-count').textContent = roomIsHost ? '' : (ROOM_API_URL ? 'Waiting for the host… 等主持人' : '');
+  document.getElementById('group-start').style.display = (roomIsHost || !ROOM_API_URL) ? '' : 'none';
+  document.getElementById('group').hidden = false;
+  if(ROOM_API_URL){ try{ connectRoom(roomCode); }catch(e){} }
+}
+function closeGroup(){ clearInterval(groupCountIv); try{ roomSocket && roomSocket.close(); }catch(e){} roomSocket=null; document.getElementById('group').hidden = true; }
+function copyJoinLink(){
+  const url = joinLink();
+  const fallback = ()=>{ try{ location.hash = 'song=' + encodeState() + '&room=' + roomCode; }catch(e){} toast('🔗 Invite link in the address bar 地址栏'); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>toast('🔗 Invite link copied! 链接已复制'), fallback);
+  else fallback();
+}
+function runGroupCountIn(done){
+  try{ Tone.start(); }catch(e){}
+  let n = 3; const cnt = document.getElementById('group-count');
+  cnt.textContent = 'Get ready… 准备';
+  clearInterval(groupCountIv);
+  groupCountIv = setInterval(()=>{
+    if(n > 0){ cnt.textContent = String(n); try{ chime('C6'); }catch(e){} n--; }
+    else { clearInterval(groupCountIv); cnt.textContent = 'GO! 🎉'; try{ chime('G6'); }catch(e){} done(); }
+  }, 800);
+}
+function groupStart(){
+  if(ROOM_API_URL && roomSocket && roomIsHost) roomSend({ type:'start' });   // tell joined phones to start too
+  runGroupCountIn(()=>{ document.getElementById('group').hidden = true; openPerform(); });
+}
+// Optional relay (only used when ROOM_API_URL is set) — fully guarded.
+function connectRoom(code){
+  try{ roomSocket && roomSocket.close(); }catch(e){}
+  const wsUrl = ROOM_API_URL.replace(/^http/, 'ws') + '?room=' + encodeURIComponent(code);
+  roomSocket = new WebSocket(wsUrl);
+  roomSocket.onmessage = (ev)=>{ let m; try{ m = JSON.parse(ev.data); }catch(e){ return; } if(m && m.type === 'start') runGroupCountIn(()=>{ document.getElementById('group').hidden = true; openPerform(); }); };
+}
+function roomSend(o){ try{ if(roomSocket && roomSocket.readyState === 1) roomSocket.send(JSON.stringify(o)); }catch(e){} }
+
+// ═══════════════════════════════════════════════════════
 // CHANGE THE CHORDS — pick the progression for the real song
 // ═══════════════════════════════════════════════════════
 function progChords(p){
@@ -2318,7 +2400,7 @@ karaokeTarget = document.getElementById('karaoke-text');
 renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies(); renderPrompts();
 try{ const z=parseFloat(localStorage.getItem('sk.zoom')); if(z && ZOOMS.includes(z)){ zoomLevel=z; applyZoom(); } }catch(e){}
 try{ if(!localStorage.getItem('sk.coached') && !location.hash) openCoach(); }catch(e){}
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('coach').hidden) closeCoach(); else if(!document.getElementById('perf').hidden) stopPerform(); else if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('fit').hidden) closeFit(); else if(!document.getElementById('book').hidden) closeBook(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('coach').hidden) closeCoach(); else if(!document.getElementById('group').hidden) closeGroup(); else if(!document.getElementById('perf').hidden) stopPerform(); else if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('fit').hidden) closeFit(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Perform mode: space / enter / any number = tap your part
 document.addEventListener('keydown', e=>{
@@ -2339,6 +2421,7 @@ document.addEventListener('keydown', e=>{
   if(el){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 150); }
 });
 if(!tryLoadShare()) showResume();
+{ const rm = (location.hash||'').match(/room=([A-Z0-9]+)/i); if(rm && S.mood) openGroup(rm[1].toUpperCase()); }
 </script>
 </body>
 </html>

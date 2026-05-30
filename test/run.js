@@ -430,6 +430,32 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ PLAY TOGETHER — P8 (round 13) ═══
+
+test('Play Together opens with a room code and invite link', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);
+  W.openGroup();
+  ok(!$('#group').hidden, 'group overlay open');
+  ok(/^[A-Z0-9]{4}$/.test($('#room-code').textContent), 'a 4-char room code shown');
+  // invite link carries the song + room (clipboard absent in jsdom -> falls back to hash)
+  W.copyJoinLink();
+  ok(W.location.hash.includes('room=') && W.location.hash.includes('song='), 'invite link encodes song + room');
+  W.closeGroup();
+  ok($('#group').hidden, 'group overlay closes');
+});
+
+test('opening a shared #room= link joins as a follower', async () => {
+  // build a host song + code
+  const a1 = loadApp();
+  await walkToStudio(a1);
+  const code = a1.window.encodeState();
+  const a2 = loadApp({ url: 'http://localhost/#song=' + code + '&room=WXYZ' });
+  await a2.tick();
+  ok(!a2.$('#group').hidden, 'auto-opened Play Together from the link');
+  eq(a2.$('#room-code').textContent, 'WXYZ', 'joined the right room');
+});
+
 // ═══ PERFORM LIVE — play-along band (round 12) ═══
 
 test('perform overlay + 3 role pads exist', (app) => {
