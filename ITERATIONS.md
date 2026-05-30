@@ -178,3 +178,34 @@ names**, so music theory is unit-testable. Then shipped a feature batch, each co
 ## X. Deploy + quality gate
 109. Deployed to **GitHub Pages** (gh-pages branch) → https://regardlessly.github.io/song-maker/ (durable, off-laptop).
 110. Suite grown to **148 assertions / 59 cases — all green**; JS parses (1344 lines); handlers + IDs verified.
+
+---
+
+# Rounds 7–11 — melody engine, classic-song templates, evidence-driven UX
+
+Two deep-research passes (see `RESEARCH.md`) confirmed: the architecture (hum topline → sectional arrangement) is right; the biggest gap is **lyrics + melody-fitting**; melody/chorus/hooks drive "song-ness" over harmony.
+
+## Y. Recognizable melodies & familiar bases
+111. **Melody engine** — public-domain tunes (欢乐颂, 两只老虎, 小星星, 生日快乐, draft 茉莉花 & 送别) play as the topline, transpose with the key, bake into the WAV. `MELODIES` + `buildMelodyGrid`/`melodyGrid`.
+112. **Hum-to-melody** — mic pitch detection (autocorrelation) → `framesToMelody`: segment, snap to scale (`snapToScale`), fit to beat → becomes the topline. Round 11 added live "I hear you" feedback + no-penalty retry.
+113. **Classic-song template dropdown** ("in the style of…") — 36-song Teresa-Teng-era library → `SONG_TEMPLATES` (key/bpm/degs/structure/instrument). Uses musical *base only*, never copyrighted melody/lyrics.
+
+## Z. Real-song chords + the chorus
+114. **Changeable progression** wired into the real song (`S.progression`) via the "Change the chords" sheet with live chord-letters + preview.
+115. **Chorus lift** (different chorus chords) and **Big chorus** (`S.bigChorus`: octave-doubled topline in the chorus via `melSyn2`) — make the chorus land. Both bake into the WAV + persist.
+116. **Syllable-to-note fit check** (`countSyllables`/`openFit`) — lists each lyric line's beat count vs a melody-derived target; flags long/short. Directly targets the research's #1 gap.
+
+## AA. Senior-UX from the research
+117. **Reminiscence prompt deck** (family/gratitude/home themes) seeds the Words step.
+118. **Completeness/confidence meter** — only-celebrates checklist (melody/chorus/words/structure → "Ready to perform!").
+119. **Global text-size** (zoom, persisted), **on-the-beat read** (TTS in tempo), **loop any section** for practice, **guided first-run coach** (replayable via ❓).
+120. **Live Jam DJ pad** (rounds 4–6): 3×3, banks (chords/parts/feel/drums), number-key mapping, progression overlay.
+
+## AB. Quality gate (current)
+121. Suite at **199 assertions / 81 cases — all green**; JS ~1690 lines; handlers + IDs verified each deploy.
+122. Two cited deep-research reports saved (`RESEARCH.md`).
+
+## Still open
+- **AI lyric co-writer** (research's top recommendation) — needs a small backend proxy for the API key; client wiring + offline-template fallback to follow.
+- **Live ensemble "perform together" mode** — pending a dedicated research pass; will extend Live Jam + Stage Mode.
+- Verify draft 茉莉花 / 送别 transcriptions; tonal-language (Mandarin/dialect) syllable-fit nuance (open question from research).

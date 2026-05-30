@@ -51,3 +51,40 @@
 
 ### Key sources
 Music Perception 42(3) 2025; Frontiers in Psychology 2017 (Shazam; folk-corpus surprisal); ComposeOn (arXiv 2502.15255); CoLyricist (arXiv 2602.22606); Chrome Music Lab Song Maker; PRISMA senior-UX review (PMC12350549); older-adult learning review (PMC8754191); Age & Ageing 2023 (afad156.029); Nordic Journal of Music Therapy 2025.
+
+---
+
+# Part 2 — Performing LIVE & "performing together" (2026-05-30)
+
+*Second deep-research pass: 24 sources → 104 claims → 25 verified (23 confirmed, 2 refuted).*
+
+## Verdict
+- **Simplest way to give a SOLO senior an ensemble feeling:** make the app an **audible, responsive "band"** — a full, slightly *fuller* (not just louder) layered backing that visibly/audibly fills in around each trigger. Untrained people **judge "togetherness" by sound**, and read fuller/louder layered sound as "more together" — *not* by precise timing. [D'Amario/Goebl/Bishop, Frontiers Psych 2022, n=10 novices]
+- **Single highest-impact live addition:** a **quantized, error-proof "YOUR TURN" cueing layer** in Stage Mode (count-in + big section signpost + auto-in-time launch). It removes the dominant fear — *coming in wrong* — because launch quantization snaps any press into time. [Ableton clip-launch manual]
+
+## What the evidence says
+- **Layer-launching is forgiving by design:** quantized launch means a pressed pad *can't be early/late* — it waits for the next bar. One press, no notes, no wrong timing. [Ableton]
+- **No wrong notes = flow:** scale/chord-locking lets the musically naive produce pleasing sound and enter flow. *(Prefer pentatonic/diatonic locking.)* [Frontiers Psychiatry 2025, N=8 pilot]
+- **Synchrony → togetherness, even at low skill:** a **4-minute** simple group-drum task produced measurable cohesion; **intentional** coordination (shared count-in/leader) bonds more than accidental drift (g=0.31). [Nature Sci Rep 2020 N=141; Rennung & Görtz meta-analysis] *(Refuted: a strong synchrony "dose-response" — don't overclaim "more sync = more bonding.")*
+- **Singing is a fast ice-breaker** — co-singing bonds strangers ~3× faster at first. [Pearce/Launay/Dunbar 2015]
+- **Drumming is the most accessible embodied surface** for untrained seniors and drives synchrony — validates the existing finger-drum bank. [PMC12759785 + RCTs]
+- **Senior payoff needs each part to feel essential & valued** — confidence/belonging gains depend on a perceived vital role. [Hallam & Creech "Music for Life", 50–93]
+- **Frame it as "play your song LIVE," not "compose,"** and **show what's next** so they can plan their entry. [Wu & Bryan-Kinns IJHCS 2018, N=24]
+
+## 10 prioritized proposals for a live-performance mode
+1. **"YOUR TURN" cueing layer in Stage Mode** *(client-side; highest impact)* — count-in + big bouncing signpost "YOUR TURN — press any pad," launch auto-quantized so any press lands in time. [Ableton; Music for Life]
+2. **Responsive "band" for solo play** *(client-side; simplest ensemble feel)* — always-on fuller layered backing that visibly/audibly responds to each trigger ("the band is playing *with* you"). [Frontiers Psych 2022]
+3. **Finger-drum "heartbeat" lead-in** *(client-side)* — start by tapping the drum pad to a visible pulse before layers enter. [Nature 2020; PMC12759785]
+4. **Reframe copy as "play your song live"** *(client-side, trivial)* — exploration, not "compose." [Wu & Bryan-Kinns]
+5. **"What's next" planning strip in Stage Mode** *(client-side)* — show the upcoming section/chord a bar ahead. [Wu & Bryan-Kinns]
+6. **Strict scale/chord lock, zero wrong notes** across all pads *(client-side)* — prefer pentatonic/diatonic. [Frontiers Psychiatry 2025]
+7. **Assigned simple "essential parts"** for multi-senior play (one drums, one chords, one sings), each audibly prominent. [Music for Life]
+8. **Shared count-in + leader/conductor device** for same-room co-performance *(NEEDS sync infra — backend/WebRTC, or simplest: everyone plays through one shared speaker/device)*. [Rennung & Görtz; web-audio timing]
+9. **30-second group warm-up co-sing/co-tap** before the song (icebreaker). [Pearce et al. 2015]
+10. **No-fail rehearse→stage continuity** — slow loops, conductor cues, "you can't mess this up," one-tap Rehearse→Stage. [Frontiers Psychiatry; Music for Life]
+
+## Caveats
+- Nearly all evidence is **Western/lab**; **none** is SG/MY getai/karaoke or Mandarin/dialect-specific — cultural fit is inferred.
+- "Fuller sound = together" rests on **n=10 young novices, lab duos** — drive a *richer mix*, don't equate loudness with quality.
+- **Robust multi-device sync (P8) is the only item needing a backend/WebRTC**; the senior-friendly low-tech answer may simply be **one shared speaker**. Everything else is client-side.
+- Two synchrony claims were **refuted** — lean on "intentional > incidental" and the cross-sectional connectedness correlation, not a dose-response.

@@ -57,9 +57,19 @@ Data tables at the top of `<script>` drive everything:
 - Tone.js calls are wrapped in `try/catch` (synths may be mid-dispose) and browser APIs (mic, speech, wake-lock, fullscreen) are **feature-detected** with graceful fallbacks. Follow both patterns.
 - **`stepActions` is sacred**: change it and both playback and export change together — that's intentional. Don't fork per-step logic into `playSong`/`saveWav`.
 
+## Added subsystems (since the original write-up)
+
+- **Melody engine**: `MELODIES` (public-domain tunes) + `buildMelodyGrid`/`melodyGrid` produce a real topline that transposes with the key and renders into the WAV. `S.melody` selects it; `melSyn2` octave-doubles it in the chorus when `S.bigChorus`.
+- **Hum-to-melody**: `startHum`/`framesToMelody`/`snapToScale` — mic autocorrelation → segment → snap to scale → fit to beat → `hummedMelody`.
+- **Classic-song templates**: `SONG_TEMPLATES` (36-song library) + `applyTemplate` set key/tempo/chords/structure (the *base feel only* — never copyrighted melody/lyrics). Dropdown labelled "in the style of…".
+- **Real-song chords**: `S.progression` (via "Change the chords" sheet / `PROGRESSIONS`), `S.chorusLift` (`CHORUS_LIFT`), `S.bigChorus` — all flow through `stepActions` into playback + WAV + share/book.
+- **Fit check** (`countSyllables`/`openFit`), **reminiscence deck** (`PROMPTS`), **completeness meter** (`updateCheck`), **global zoom** (`cycleZoom`), **guided coach** (`COACH_STEPS`/`openCoach`), **loop-any-section** (`practiceSection`).
+- State `S` has grown accordingly: `progression, chorusLift, bigChorus, melody, title`. All persisted in `encodeState`/`stateToEntry`/`applyEntry` (share + Song Book + draft); hummed melodies store their notes (`hn`/`humNotes`).
+- Tests: `npm test` now ~200 assertions / 81 cases. Two cited deep-research reports in `RESEARCH.md`.
+
 ## Not yet built (see CONCEPT.md roadmap)
 
-- True **hum-to-melody** capture (only key/range fitting exists today).
-- **AI lyric co-writer** — would need a small backend proxy to hold the provider key (a DeepSeek key was mentioned; an API key must never ship in this client file). The current lyrics helper is template-based.
-- **QR-to-TV** handoff for the venue screen (share links exist; QR generation not yet).
-- Live **performance recording** (mic + backing), group/duet mode, chord sheets, multi-device sync.
+- **AI lyric co-writer** — the top research recommendation; needs a small **backend proxy** to hold the provider key (an API key must never ship in this client file). The current `helpWrite` is template-based and is the intended offline fallback.
+- **Live ensemble "perform together" mode** — extends the Live Jam pad + Stage Mode; pending a dedicated research pass.
+- Verify the **draft 茉莉花 / 送别** melody transcriptions; handle **tonal-language** (Mandarin/dialect) syllable-fit nuance.
+- **QR-to-TV** handoff, live **performance recording** (mic + backing), multi-device sync, chord sheets.
