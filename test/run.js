@@ -430,6 +430,47 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ HUM-TO-MELODY (round 8) ═══
+
+test('hum button + overlay are present', (app) => {
+  const { $ } = app;
+  ok($('#hum'), 'hum overlay exists');
+  ok([...app.$$('#step-6 button')].some(b=>/Hum your own tune/.test(b.textContent)), 'Hum button on studio');
+});
+
+test('snapToScale snaps pitches into the key', (app) => {
+  const { window: W } = app;
+  const maj = [0,2,4,5,7,9,11];
+  eq(W.snapToScale(64, 0, maj), 64, 'E stays E in C major');
+  ok([60,62].includes(W.snapToScale(61, 0, maj)), 'C# snaps to C or D');
+  eq(W.snapToScale(66, 0, maj), 65, 'F# snaps to F (nearest scale tone)');
+});
+
+test('framesToMelody turns hummed pitches into a snapped, beat-fit melody', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);                       // Happy = C major, tonic C5 (midi 72)
+  // ~350ms humming C5 (523Hz), then ~350ms humming E5 (659Hz), frames every 16ms
+  const frames = [];
+  for(let t=0; t<350; t+=16) frames.push({ t, f:523.25 });
+  for(let t=350; t<700; t+=16) frames.push({ t, f:659.25 });
+  const notes = W.framesToMelody(frames);
+  ok(notes && notes.length === 2, 'two notes detected');
+  eq(notes[0][0], 0, 'first note = tonic (offset 0)');
+  eq(notes[1][0], 4, 'second note = major third (offset 4)');
+  ok(notes[0][1] >= 1, 'notes have step durations');
+});
+
+test('framesToMelody ignores silence/blips', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  const frames = [];
+  for(let t=0;t<300;t+=16) frames.push({ t, f:523.25 });   // a note
+  for(let t=300;t<500;t+=16) frames.push({ t, f:0 });        // silence (no pitch)
+  for(let t=500;t<540;t+=16) frames.push({ t, f:880 });      // 40ms blip -> dropped
+  const notes = W.framesToMelody(frames);
+  ok(notes === null || notes.length <= 1, 'blip + single note does not make a melody (needs >=2)');
+});
+
 // ═══ CLASSIC-SONG TEMPLATE DROPDOWN (round 6) ═══
 
 test('template dropdown is populated with grouped songs', (app) => {

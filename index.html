@@ -218,6 +218,17 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 #chords .close{width:100%;margin-top:6px;padding:14px;font-size:18px;font-weight:800;border-radius:13px;
   border:2.5px solid #7a5a3a;background:#fffaf4;color:#7a5a3a;cursor:pointer}
 
+/* ── Hum overlay ── */
+#hum{position:fixed;inset:0;z-index:6200;background:#00000088;display:flex;align-items:center;justify-content:center;padding:20px}
+#hum[hidden]{display:none}
+#hum .sheet{background:#fffaf4;border-radius:18px;padding:26px;max-width:520px;width:100%;text-align:center}
+#hum h2{color:#2a1600;font-size:23px;margin-bottom:10px}
+#hum-status{font-size:17px;color:#7a5a3a;font-weight:700;margin-bottom:4px}
+#hum-note{font-size:56px;font-weight:900;color:#c05c1a;min-height:66px;line-height:1.1}
+#hum .sheet button{width:100%;margin-top:8px;padding:15px;font-size:17px;font-weight:800;border-radius:13px;border:2.5px solid;cursor:pointer}
+#hum-stop{background:#388a3c;border-color:#388a3c;color:#fff}
+#hum-cancel{background:#fffaf4;border-color:#c05c1a;color:#c05c1a}
+
 /* ── Toast ── */
 #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#2a1600;color:#fff;
   padding:13px 22px;border-radius:26px;font-weight:700;font-size:16px;z-index:7000;opacity:0;
@@ -334,6 +345,9 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <select id="mel-select" onchange="setMelody(this.value)"></select>
     </div>
     <div class="ctrl-row">
+      <button class="go" onclick="startHum()">🎤 Hum your own tune · 哼出你的旋律</button>
+    </div>
+    <div class="ctrl-row">
       <button id="tempo-btn" onclick="toggleTempo()">🐢 Slower<br><span style="font-size:11px">慢一点</span></button>
       <button onclick="changeKey(-1)">🔽 Lower<br><span style="font-size:11px">低音</span></button>
       <button onclick="changeKey(1)">🔼 Higher<br><span style="font-size:11px">高音</span></button>
@@ -396,6 +410,17 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
     </div>
     <div id="chords-list"></div>
     <button class="close" onclick="closeChords()">Done 完成</button>
+  </div>
+</div>
+
+<!-- Hum-to-melody overlay -->
+<div id="hum" hidden>
+  <div class="sheet">
+    <h2>🎤 Hum your tune · 哼出旋律</h2>
+    <div id="hum-status">Get ready… 准备…</div>
+    <div id="hum-note">3</div>
+    <button id="hum-stop" onclick="stopHum()">✓ Done — use my tune · 完成</button>
+    <button id="hum-cancel" onclick="cancelHum()">Cancel 取消</button>
   </div>
 </div>
 
@@ -1346,11 +1371,14 @@ function closeChords(){ stopPreview(); document.getElementById('chords').hidden 
 
 // ── Melody picker + the "what's in your song" readout ──
 function renderMelodies(){
+  const list = [MELODIES[0]];                          // 'auto' first
+  if(hummedMelody) list.push(hummedMelody);            // then the user's hum, if any
+  for(let i=1;i<MELODIES.length;i++) list.push(MELODIES[i]);
   document.getElementById('mel-select').innerHTML =
-    MELODIES.map(m=>`<option value="${m.id}">🎶 ${m.cn} · ${m.en}</option>`).join('');
+    list.map(m=>`<option value="${m.id}">🎶 ${m.cn} · ${m.en}</option>`).join('');
 }
 function setMelody(id){
-  const m = MELODIES.find(x=>x.id===id);
+  const m = (id==='hum') ? hummedMelody : MELODIES.find(x=>x.id===id);
   S.melody = (m && m.notes) ? m : null;
   persistDraft(); updateSongInfo();
   if(S.playing) replaySong();
@@ -1365,6 +1393,102 @@ function songInfoText(){
   return `${S.mood.key}${S.mood.scale==='minor'?'m':''} · ${Math.round(S.mood.bpm*S.tempoMul)}bpm · ${chords}${lift} · 🎶${mel}`;
 }
 function updateSongInfo(){ const el = document.getElementById('song-info'); if(el) el.textContent = songInfoText(); }
+
+// ═══════════════════════════════════════════════════════
+// HUM-TO-MELODY — sing your own tune; we detect, snap to key, fit to beat
+// ═══════════════════════════════════════════════════════
+let hummedMelody = null;
+let humCtx=null, humStream=null, humAnalyser=null, humRAF=null, humFrames=[], humStart=0, humActive=false, humCountIv=null;
+
+function median(a){ const b=[...a].sort((x,y)=>x-y); return b[Math.floor(b.length/2)]; }
+function nearestWithPc(m, pc){ const d=((m%12)-pc+12)%12; const down=m-d, up=down+12; return (m-down)<=(up-m)?down:up; }
+function snapToScale(m, keyRoot, scale){
+  let best=m, bd=999;
+  for(const s of scale){ const pc=((keyRoot+s)%12+12)%12; const c=nearestWithPc(m,pc); if(Math.abs(c-m)<bd){ bd=Math.abs(c-m); best=c; } }
+  return best;
+}
+// Turn captured {t,f} frames into a melody (offsets-from-tonic + step durations)
+function framesToMelody(frames){
+  if(!frames || !frames.length) return null;
+  const bpm = Math.round(S.mood.bpm * S.tempoMul);
+  const sixteenthMs = (60/bpm)/4*1000;
+  const keyRoot = NOTES.indexOf(S.mood.key);
+  const scale = SCALES[S.mood.scale];
+  const tonic5 = nMidi(S.mood.key, 5);
+  const seq = frames.map(fr => (fr.f>60 && fr.f<1200) ? (69 + 12*Math.log2(fr.f/440)) : null);
+  const segs=[]; let cur=null;
+  for(let i=0;i<seq.length;i++){
+    const m=seq[i], t=frames[i].t;
+    if(m===null){ if(cur){ cur.end=t; segs.push(cur); cur=null; } continue; }
+    if(cur && Math.abs(m-cur.ref)<1.0){ cur.vals.push(m); cur.end=t; cur.ref=median(cur.vals); }
+    else { if(cur){ cur.end=t; segs.push(cur); } cur={start:t,end:t,vals:[m],ref:m}; }
+  }
+  if(cur) segs.push(cur);
+  const notes=[];
+  for(const s of segs){
+    const durMs = Math.max(0, s.end - s.start);
+    if(durMs < 90) continue;                       // drop blips
+    const steps = Math.max(1, Math.min(16, Math.round(durMs / sixteenthMs)));
+    const snapped = snapToScale(Math.round(median(s.vals)), keyRoot, scale);
+    notes.push([snapped - tonic5, steps]);
+  }
+  return notes.length>=2 ? notes : null;
+}
+
+function cleanupHumAudio(){
+  try{ humStream && humStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  try{ humCtx && humCtx.close(); }catch(e){}
+  humStream=null; humCtx=null; humAnalyser=null;
+}
+async function startHum(){
+  if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('No microphone here 没有麦克风'); return; }
+  stopSong();
+  try{ humStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ toast('Please allow the microphone 请允许麦克风'); return; }
+  humCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = humCtx.createMediaStreamSource(humStream);
+  humAnalyser = humCtx.createAnalyser(); humAnalyser.fftSize = 2048; src.connect(humAnalyser);
+  document.getElementById('hum').hidden = false;
+  document.getElementById('hum-status').textContent = 'Get ready… 准备…';
+  let n=3; document.getElementById('hum-note').textContent = n;
+  humCountIv = setInterval(()=>{
+    n--;
+    if(n>0){ document.getElementById('hum-note').textContent = n; }
+    else { clearInterval(humCountIv); beginHumCapture(); }
+  }, 800);
+}
+function beginHumCapture(){
+  humFrames=[]; humActive=true; humStart=performance.now();
+  document.getElementById('hum-status').textContent = '🎤 Hum now — la-la-la! · 现在哼唱';
+  const buf = new Float32Array(humAnalyser.fftSize);
+  const loop = ()=>{
+    if(!humActive) return;
+    humAnalyser.getFloatTimeDomainData(buf);
+    const f = autoCorrelate(buf, humCtx.sampleRate);
+    const t = performance.now() - humStart;
+    humFrames.push({ t, f });
+    if(f>60 && f<1200){ const midi=Math.round(69+12*Math.log2(f/440)); document.getElementById('hum-note').textContent = NOTES[((midi%12)+12)%12]; }
+    if(t > 12000){ stopHum(); return; }          // auto-stop at 12s
+    humRAF = requestAnimationFrame(loop);
+  };
+  loop();
+}
+function stopHum(){
+  clearInterval(humCountIv);
+  if(!humActive && !humFrames.length){ cancelHum(); return; }
+  humActive=false; cancelAnimationFrame(humRAF);
+  cleanupHumAudio();
+  document.getElementById('hum').hidden = true;
+  const notes = framesToMelody(humFrames);
+  if(!notes){ toast('Didn’t catch a tune — try again 没听清，再试一次'); return; }
+  hummedMelody = { id:'hum', en:'My hum', cn:'我的旋律', notes };
+  renderMelodies();
+  document.getElementById('mel-select').value = 'hum';
+  setMelody('hum');
+  toast('🎤 Your tune is now the melody! 你的旋律已加入');
+}
+function cancelHum(){ clearInterval(humCountIv); humActive=false; cancelAnimationFrame(humRAF); cleanupHumAudio(); document.getElementById('hum').hidden = true; }
 
 // ═══════════════════════════════════════════════════════
 // SAVE — WAV (offline render) + lyric sheet
@@ -1473,6 +1597,7 @@ function saveToBook(){
     structure:S.structure.id, words:S.words, transpose:S.transpose, tempoMul:S.tempoMul,
     progression:S.progression?S.progression.id:null, chorusLift:S.chorusLift?1:0,
     melody:S.melody?S.melody.id:null,
+    humNotes:(S.melody && S.melody.id==='hum') ? S.melody.notes : null,
   });
   persistBook(arr.slice(0,50));
   toast('⭐ Kept in your song book! 已收藏');
@@ -1492,8 +1617,13 @@ function applyEntry(e){
   const ep = e.progression ? PROGRESSIONS.find(x=>x.id===e.progression) : null;
   S.progression = (ep && ep.degs) ? ep : null;
   S.chorusLift = !!e.chorusLift;
-  const em = e.melody ? MELODIES.find(x=>x.id===e.melody) : null;
-  S.melody = (em && em.notes) ? em : null;
+  if(e.melody === 'hum' && e.humNotes && e.humNotes.length){
+    hummedMelody = { id:'hum', en:'My hum', cn:'我的旋律', notes:e.humNotes };
+    S.melody = hummedMelody; renderMelodies();
+  } else {
+    const em = e.melody ? MELODIES.find(x=>x.id===e.melody) : null;
+    S.melody = (em && em.notes) ? em : null;
+  }
   const ms = document.getElementById('mel-select'); if(ms) ms.value = S.melody ? S.melody.id : 'auto';
   document.getElementById('words-area').value = S.words;
   document.getElementById('title-area').value = S.title;
@@ -1753,7 +1883,8 @@ function slug(s){ return String(s||'song').toLowerCase().replace(/[^a-z0-9]+/g,'
 function encodeState(){
   const o = { t:S.title, m:S.mood&&S.mood.id, r:S.rhythm&&S.rhythm.id, i:S.instrument&&S.instrument.id,
               s:S.structure.id, w:S.words, tr:S.transpose, tm:S.tempoMul,
-              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0, ml:S.melody?S.melody.id:null };
+              p:S.progression?S.progression.id:null, cl:S.chorusLift?1:0, ml:S.melody?S.melody.id:null,
+              hn:(S.melody && S.melody.id==='hum') ? S.melody.notes : undefined };
   try{ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }catch(e){ return ''; }
 }
 function decodeState(str){
@@ -1761,7 +1892,7 @@ function decodeState(str){
 }
 function stateToEntry(st){
   return { title:st.t, mood:st.m, rhythm:st.r, instrument:st.i, structure:st.s, words:st.w,
-           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl, melody:st.ml };
+           transpose:st.tr, tempoMul:st.tm, progression:st.p, chorusLift:st.cl, melody:st.ml, humNotes:st.hn };
 }
 function shareLink(){
   if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
@@ -1830,7 +1961,7 @@ function printLyricSheet(){
 // ═══════════════════════════════════════════════════════
 karaokeTarget = document.getElementById('karaoke-text');
 renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies();
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Number keys trigger jam pads (only while the jam pad is open)
 document.addEventListener('keydown', e=>{
