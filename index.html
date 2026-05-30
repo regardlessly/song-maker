@@ -252,7 +252,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
   <div class="step-title"><h1>How are you feeling today?</h1><span class="cn">你今天心情如何？</span></div>
   <div class="step-content">
     <div class="tpl-row">
-      <label for="tpl-select">🎼 …or start from a classic song · 选一首经典老歌</label>
+      <label for="tpl-select">🎼 …or start in the style of a classic song · 模仿经典老歌的风格</label>
       <select id="tpl-select" onchange="applyTemplate(this.value)"></select>
     </div>
     <div class="mood-grid" id="mood-grid"></div>
@@ -548,6 +548,18 @@ const MELODIES = [
   { id:'birthday', en:'Happy Birthday', cn:'生日快乐', notes:[
     [7,2],[7,2],[9,4],[7,4],[12,4],[11,8],[7,2],[7,2],[9,4],[7,4],[14,4],[12,8],
     [7,2],[7,2],[19,4],[16,4],[12,4],[11,4],[9,8],[17,2],[17,2],[16,4],[12,4],[14,4],[12,8] ] },
+  // PD Chinese folk — 茉莉花 (centuries-old folk) and 送别 (1851 Ordway melody). Draft transcriptions to verify.
+  { id:'jasmine', en:'Jasmine Flower (draft)', cn:'茉莉花', notes:[
+    [4,2],[4,2],[7,2],[9,2],[7,2],[4,2],[7,4],
+    [4,2],[4,2],[7,2],[9,2],[7,2],[4,2],[7,4],
+    [9,2],[9,2],[12,2],[9,2],[7,4],
+    [7,2],[4,2],[7,2],[9,2],[7,2],[4,2],[2,4],
+    [0,2],[2,2],[4,2],[7,4],
+    [4,2],[2,2],[0,2],[2,2],[0,8] ] },
+  { id:'farewell', en:'Farewell (draft)', cn:'送别', notes:[
+    [7,4],[4,4],[7,4],[12,4],[9,4],[12,4],[7,8],
+    [7,4],[12,4],[11,4],[9,4],[7,8],
+    [7,4],[4,4],[7,4],[12,4],[9,4],[12,4],[7,8] ] },
 ];
 
 // ── Lyric templates (client-side helper) ──
@@ -1685,7 +1697,7 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 // ── Start from a classic song (template dropdown) ──
 function renderTemplates(){
   const sel = document.getElementById('tpl-select');
-  let html = '<option value="">— choose a familiar song · 选歌 —</option>';
+  let html = '<option value="">— in the style of… · 选风格 —</option>';
   TPL_GROUPS.forEach(([g,label])=>{
     const items = SONG_TEMPLATES.filter(t=>t.grp===g);
     if(!items.length) return;
@@ -1713,7 +1725,7 @@ function applyTemplate(id){
   document.getElementById('tempo-btn').classList.remove('on');
   document.getElementById('tempo-btn').innerHTML='🐢 Slower<br><span style="font-size:11px">慢一点</span>';
   highlightSelections();
-  toast(`🎼 Based on “${t.cn}” · now add your own words! 加你的词`);
+  toast(`🎼 In the style of “${t.cn}” · its chords & feel — add your own tune & words! 自己的旋律和词`);
   goToStep(LAST_STEP);
 }
 async function surpriseMe(){

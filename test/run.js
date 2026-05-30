@@ -375,8 +375,17 @@ test('enterStage (async, with audible count-in) does not throw', async (app) => 
 
 test('melody dropdown is populated', (app) => {
   const { $$ } = app;
-  ok($$('#mel-select option').length === 5, 'auto + 4 PD melodies');
+  ok($$('#mel-select option').length === 7, 'auto + 6 PD melodies');
   ok($$('#mel-select option').some(o=>o.textContent.includes('两只老虎')), 'includes Two Tigers');
+  ok($$('#mel-select option').some(o=>o.textContent.includes('茉莉花')), 'includes Jasmine Flower');
+  ok($$('#mel-select option').some(o=>o.textContent.includes('送别')), 'includes Farewell');
+});
+
+test('Jasmine Flower melody plays its opening note', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);               // C major; 茉莉花 opens on mi (offset 4)
+  W.setMelody('jasmine'); W.buildPlan();
+  eq(W.stepActions(0).melody, 'E5', 'Jasmine opens on E5 (mi)');
 });
 
 test('choosing a melody plays the encoded tune as the topline', async (app) => {
