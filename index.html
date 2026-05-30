@@ -110,6 +110,11 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 
 #play-status{text-align:center;font-size:15px;color:#7a5a3a;padding:2px 0 4px;flex-shrink:0;font-weight:600;min-height:20px}
 #song-info{text-align:center;font-size:13px;color:#9a7a55;font-weight:700;padding:0 0 4px;flex-shrink:0;font-family:ui-monospace,monospace;word-break:break-word}
+#song-check{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:2px 0 5px;flex-shrink:0}
+.chk{font-size:12px;font-weight:800;color:#b8906a;border:1.5px solid #e5cfb5;border-radius:20px;padding:3px 9px}
+.chk.on{color:#388a3c;border-color:#388a3c}
+.chk.done{color:#fff;background:#388a3c;border-color:#388a3c}
+.prompt-label{font-size:13px;font-weight:700;color:#7a5a3a;flex-shrink:0;padding-top:4px}
 #mel-select{flex:1;padding:11px;font-size:15px;font-weight:800;border:2.5px solid #c8a06a;border-radius:12px;background:#fffaf4;color:#2a1600;min-height:50px}
 
 .ctrl-row{display:flex;gap:8px;flex-shrink:0;margin-top:7px}
@@ -244,6 +249,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
 
 <div id="topbar">
   <button id="resume-btn" title="Continue last song" onclick="resumeDraft()" hidden>↩️</button>
+  <button id="zoom-btn" title="Text size 字体大小" onclick="cycleZoom()">🔍</button>
   <button id="jam-toggle" title="Live Jam pad" onclick="openJam()">🎛</button>
   <button id="tts-toggle" title="Read aloud" onclick="toggleTTS()">🔈</button>
   <button id="book-toggle" title="My songs" onclick="openBook()">📖</button>
@@ -313,13 +319,10 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
     <div class="help-row">
       <button id="gen-btn" onclick="helpWrite()">✨ Help me write 帮我写</button>
       <button id="read-btn" onclick="readWords()">🔊 Read aloud 朗读</button>
+      <button id="beat-btn" onclick="speakInTime()">🗣 On the beat 跟拍</button>
     </div>
-    <div class="tmpl-row">
-      <button class="tbtn" onclick="tmpl('Today I feel ')">Today I feel...</button>
-      <button class="tbtn" onclick="tmpl('I remember when ')">I remember when...</button>
-      <button class="tbtn" onclick="tmpl('My favorite ')">My favorite...</button>
-      <button class="tbtn" onclick="tmpl('I am thankful for ')">I am thankful for...</button>
-    </div>
+    <div class="prompt-label">💭 Or tap a song idea · 选个主题</div>
+    <div class="tmpl-row" id="prompt-row"></div>
   </div>
   <div class="step-nav">
     <button class="back-btn" onclick="goBack()">⬅ Back</button>
@@ -337,6 +340,7 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       Tap Play to start! 🎵<br><span style="font-size:16px">点击播放开始</span>
     </div></div>
     <div id="play-status"></div>
+    <div id="song-check"></div>
     <div id="song-info"></div>
     <div class="ctrl-row">
       <button class="go" onclick="openChords()">🎹 Change the chords · 换和弦走向</button>
@@ -354,8 +358,13 @@ html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-seri
       <button id="key-btn" onclick="findMyKey()">🎤 My key<br><span style="font-size:11px">找音高</span></button>
     </div>
     <div class="ctrl-row">
+      <span style="flex:0 0 auto;align-self:center;font-size:13px;font-weight:800;color:#7a5a3a;padding:0 4px">🔂 Practice 练习</span>
+      <button onclick="practiceSection('verse')">Verse 主歌</button>
+      <button onclick="practiceSection('chorus')">Chorus 副歌</button>
+      <button onclick="practiceSection('bridge')">Bridge 桥段</button>
+    </div>
+    <div class="ctrl-row">
       <button class="go" onclick="enterStage()">🎤 Stage 上台</button>
-      <button onclick="practiceChorus()">🔂 Practice 练习</button>
       <button id="save-btn" onclick="saveWav()">💾 Save 保存</button>
       <button onclick="shareLink()">🔗 Share 分享</button>
     </div>
@@ -824,13 +833,15 @@ function finishSong(){
 }
 function replaySong(){ stopSong(); playSong(); }
 
-async function practiceChorus(){
+function practiceChorus(){ return practiceSection('chorus'); }
+async function practiceSection(type){
   if(!S.mood){ toast('Make a song first 先做一首歌'); return; }
   if(S.playing){ stopSong(); return; }   // toggle off if already playing
   await Tone.start();
   stopPreview(); buildPlan();
-  const r = sectionRange('chorus') || sectionRange('verse');
+  const r = sectionRange(type) || sectionRange('chorus') || sectionRange('verse');
   if(!r){ toast('Nothing to practice yet 没有可练习的部分'); return; }
+  const lab = (SEC_LABEL[type] && sectionRange(type)) ? SEC_LABEL[type] : SEC_LABEL[(barPlan[r.start]||'chorus')];
   makeChordSyn(S.instrument); makeBassSyn(); makeMelSyn();
   const bpm = Math.round(S.mood.bpm * S.tempoMul);
   curBpm = bpm;
@@ -846,9 +857,9 @@ async function practiceChorus(){
   S.playing = true;
   const btn = document.getElementById('play-btn-big');
   btn.textContent = '⏹ Stop practice'; btn.classList.add('playing');
-  document.getElementById('play-status').textContent = '🔂 Practising the chorus — tap ⏹ to stop 练习副歌';
+  document.getElementById('play-status').textContent = `🔂 Practising — tap ⏹ to stop 练习中`;
   const target = karaokeTarget || document.getElementById('karaoke-text');
-  target.innerHTML = '<span style="font-size:48px">🔂</span><br><span style="color:#c05c1a;font-weight:800;font-size:24px">Chorus · 副歌</span>';
+  target.innerHTML = `<span style="font-size:48px">🔂</span><br><span style="color:#c05c1a;font-weight:800;font-size:24px">${lab.en} · ${lab.cn}</span>`;
 }
 
 async function playSong(){
@@ -1392,7 +1403,68 @@ function songInfoText(){
   const mel = S.melody ? S.melody.cn : '自动';
   return `${S.mood.key}${S.mood.scale==='minor'?'m':''} · ${Math.round(S.mood.bpm*S.tempoMul)}bpm · ${chords}${lift} · 🎶${mel}`;
 }
-function updateSongInfo(){ const el = document.getElementById('song-info'); if(el) el.textContent = songInfoText(); }
+function updateSongInfo(){ const el = document.getElementById('song-info'); if(el) el.textContent = songInfoText(); updateCheck(); }
+
+// #10 — friendly completeness / confidence meter (only ever celebrates progress)
+function updateCheck(){
+  const el = document.getElementById('song-check'); if(!el) return;
+  if(!S.mood){ el.innerHTML=''; return; }
+  const items = [
+    ['🎶','旋律 Melody', !!S.melody],
+    ['🎤','副歌 Chorus', S.structure.sections.includes('chorus')],
+    ['✍️','歌词 Words', !!(S.words && S.words.trim())],
+    ['🎼','结构 Structure', true],
+  ];
+  let html = items.map(([e,l,ok])=>`<span class="chk ${ok?'on':''}">${ok?'✓':'○'} ${e} ${l}</span>`).join('');
+  if(items.every(x=>x[2])) html += '<span class="chk done">🎉 Ready to perform! 可以表演了</span>';
+  el.innerHTML = html;
+}
+
+// #6 — "hear my words on the beat" (approximate singability preview via TTS)
+function speakInTime(){
+  const t = (document.getElementById('words-area') ? document.getElementById('words-area').value : '') || S.words || '';
+  if(!t.trim()){ toast('Add some words first 先加歌词'); return; }
+  if(!('speechSynthesis' in window)){ toast('Read-aloud not available 朗读不可用'); return; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const words = t.replace(/\n/g,' ').split(/\s+/).filter(Boolean).slice(0,64);
+  const bpm = Math.round((S.mood ? S.mood.bpm : 90) * (S.tempoMul||1)) || 90;
+  const perWordMs = (60/bpm)*1000;                 // ~one word per beat
+  words.forEach((w,i)=>{
+    setTimeout(()=>{ try{ const u=new SpeechSynthesisUtterance(w); u.rate=1; speechSynthesis.speak(u); }catch(e){} }, i*perWordMs);
+  });
+  toast('🗣 Your words on the beat 跟着拍子');
+}
+
+// #5 — reminiscence prompt deck (themes that resonate most for seniors)
+const PROMPTS = [
+  { en:'For my grandchild', cn:'给孙子', seed:'My dear grandchild,\n我亲爱的孙儿，\n' },
+  { en:'Thank an old friend', cn:'谢谢老朋友', seed:'Thank you, my old friend,\n谢谢你，老朋友，\n' },
+  { en:'Missing home', cn:'想念家乡', seed:'I still remember my hometown,\n我还记得家乡，\n' },
+  { en:'Our love', cn:'我们的爱', seed:'The day we first met,\n我们初次相见的那天，\n' },
+  { en:'A grateful heart', cn:'感恩的心', seed:'I am thankful for,\n我感恩，\n' },
+];
+function renderPrompts(){
+  const row = document.getElementById('prompt-row'); if(!row) return;
+  row.innerHTML = PROMPTS.map((p,i)=>`<button class="tbtn" onclick="remindPrompt(${i})">${p.cn} · ${p.en}</button>`).join('');
+}
+function remindPrompt(i){
+  const p = PROMPTS[i]; if(!p) return;
+  const ta = document.getElementById('words-area');
+  ta.value = p.seed; ta.focus();
+  try{ ta.setSelectionRange(ta.value.length, ta.value.length); }catch(e){}
+  toast(`✍️ ${p.cn} · ${p.en}`);
+}
+
+// #7 — global text size (zoom) for low vision; persists
+let zoomLevel = 1;
+const ZOOMS = [1, 1.15, 1.3];
+function applyZoom(){ try{ document.documentElement.style.zoom = String(zoomLevel); }catch(e){} }
+function cycleZoom(){
+  zoomLevel = ZOOMS[(ZOOMS.indexOf(zoomLevel)+1) % ZOOMS.length];
+  try{ localStorage.setItem('sk.zoom', String(zoomLevel)); }catch(e){}
+  applyZoom();
+  toast(`🔍 Text size ${Math.round(zoomLevel*100)}%`);
+}
 
 // ═══════════════════════════════════════════════════════
 // HUM-TO-MELODY — sing your own tune; we detect, snap to key, fit to beat
@@ -1960,7 +2032,8 @@ function printLyricSheet(){
 // INIT
 // ═══════════════════════════════════════════════════════
 karaokeTarget = document.getElementById('karaoke-text');
-renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies();
+renderMoods(); renderRhythms(); renderInstruments(); renderStructures(); renderTemplates(); renderMelodies(); renderPrompts();
+try{ const z=parseFloat(localStorage.getItem('sk.zoom')); if(z && ZOOMS.includes(z)){ zoomLevel=z; applyZoom(); } }catch(e){}
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(!document.getElementById('hum').hidden) cancelHum(); else if(!document.getElementById('stage').hidden) stageStop(); else if(!document.getElementById('jam').hidden) closeJam(); else if(!document.getElementById('chords').hidden) closeChords(); else if(!document.getElementById('book').hidden) closeBook(); } });
 
 // Number keys trigger jam pads (only while the jam pad is open)

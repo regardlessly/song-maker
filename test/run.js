@@ -430,6 +430,52 @@ test('song-info readout shows key, tempo and chords', async (app) => {
   ok(info.includes('Em') && info.includes('Am'), 'shows the template chord letters');
 });
 
+// ═══ TIER B/C BATCH 1 (round 9) ═══
+
+test('reminiscence prompt deck fills the words box', async (app) => {
+  const { $, $$, window: W, tick } = app;
+  await walkToStudio(app);
+  W.goBack();                                   // to words step
+  ok($$('#prompt-row .tbtn').length >= 5, 'prompt cards rendered');
+  W.remindPrompt(0);
+  ok($('#words-area').value.includes('grandchild') || $('#words-area').value.includes('孙'), 'prompt seeded the words');
+});
+
+test('completeness meter reflects the song state and celebrates when full', async (app) => {
+  const { $, window: W, tick } = app;
+  await walkToStudio(app);                       // classic structure (has chorus), lyrics from helpWrite
+  W.setMelody('tiger');                          // add a melody
+  W.updateSongInfo();
+  const txt = $('#song-check').textContent;
+  ok(txt.includes('Melody') && txt.includes('Chorus') && txt.includes('Words'), 'shows the checklist');
+  ok(txt.includes('Ready'), 'celebrates when melody+chorus+words+structure all present');
+});
+
+test('global text-size zoom cycles and persists', async (app) => {
+  const { window: W } = app;
+  const before = W.document.documentElement.style.zoom;
+  W.cycleZoom();
+  ok(W.document.documentElement.style.zoom !== before, 'zoom changed');
+  ok(W.localStorage.getItem('sk.zoom'), 'zoom persisted');
+});
+
+test('practiceSection loops any named section without throwing', async (app) => {
+  const { $, window: W } = app;
+  await walkToStudio(app);                       // full structure has a bridge
+  $('#shape-grid');
+  await W.practiceSection('verse');
+  ok($('#play-btn-big').textContent.includes('Stop') || $('#play-status').textContent.includes('Practising'), 'verse practice engaged');
+  W.stopSong();
+  try { await W.practiceSection('bridge'); ok(true, 'bridge practice ok'); } catch(e){ ok(false, 'threw: '+e.message); }
+  W.stopSong();
+});
+
+test('speakInTime does not throw', async (app) => {
+  const { window: W } = app;
+  await walkToStudio(app);
+  try { W.speakInTime(); ok(true, 'on-the-beat read ran'); } catch(e){ ok(false, 'threw: '+e.message); }
+});
+
 // ═══ HUM-TO-MELODY (round 8) ═══
 
 test('hum button + overlay are present', (app) => {
